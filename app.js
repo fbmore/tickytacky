@@ -908,7 +908,17 @@ let statusError = null;
 let connError = null; // until the first successful fetch
 function showStatusError(msg) { statusError = msg; render(); setTimeout(() => { statusError = null; render(); }, 4000); }
 
+// Online only: flag the tab when it's your turn (or a rematch waits) while you're elsewhere.
+function updateTitle() {
+  const role = myRole();
+  const waiting = !!(backend && !backend.local && role && !state.closedBy &&
+    (ui.canPlace() || (state.winner && state.ready[other(role)] && !state.ready[role])));
+  document.title = (document.hidden && waiting ? "● Your move · " : "") + "Tic Tac Cube";
+}
+document.addEventListener("visibilitychange", updateTitle);
+
 function render() {
+  updateTitle();
   const role = myRole();
   $("nameX").textContent = state.players.X?.name || "Waiting…";
   $("nameO").textContent = state.players.O?.name || "Waiting…";
