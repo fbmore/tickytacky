@@ -101,4 +101,12 @@ s = fold([...three, mv("b", g3.idx(1,2,2)), mv("a", g3.idx(0,2,0))]);
 assert.equal(s.winner, "X");
 assert.equal(describeLine(s.winLine, 3), "straight down through all layers");
 
+// close: host cancels the invite → nobody can join; spectators can't close; later events ignored
+s = fold([ev("a", "join", { cell: 4 }), ev("a", "close"), ev("b", "join")]);
+assert.equal(s.closedBy, "X");
+assert.equal(s.players.O, null);
+s = fold([...base, ev("c", "close"), mv("a", 0), ev("b", "close"), mv("b", 1)]);
+assert.equal(s.closedBy, "O");
+assert.deepEqual(s.moves.map((m) => m.cell), [0]);
+
 console.log("game.test: all passed");

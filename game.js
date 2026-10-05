@@ -78,6 +78,7 @@ export function emptyState(n = DEFAULT_SIZE) {
     winner: null, // 'X' | 'O' | 'draw' | null
     winLine: null,
     resigned: null, // role that resigned this round
+    closedBy: null, // role that ended the whole game (or cancelled the invite)
     lastMove: null,
     moves: [], // [{cell, role}] this round, for replay
     score: { X: 0, O: 0 },
@@ -108,8 +109,13 @@ function resetBoard(s) {
 }
 
 export function apply(s, e) {
+  if (s.closedBy) return s; // a closed game ignores everything after
   const role = roleOf(s, e.author);
   switch (e.kind) {
+    case "close": {
+      if (role) s.closedBy = role;
+      break;
+    }
     case "join": {
       if (!s.sizeSet) {
         s.sizeSet = true;

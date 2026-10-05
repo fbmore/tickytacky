@@ -9,6 +9,7 @@ import {
 
 const params = new URLSearchParams(location.search);
 const GAME_ID = (params.get("g") || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 32);
+const SEAT2 = params.get("seat") === "2"; // testing: second seat with the same Apple Account
 const DEMO = params.has("demo");
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $ = (id) => document.getElementById(id);
@@ -488,7 +489,8 @@ async function cloudBackend(onAuthChange) {
 
   const handleIdentity = (identity) => {
     if (identity) {
-      be.signedIn = true; be.me = identity.userRecordName; onAuthChange(be);
+      // `&seat=2` (testing): play the other seat with the same Apple Account.
+      be.signedIn = true; be.me = identity.userRecordName + (SEAT2 ? "~2" : ""); onAuthChange(be);
       container.whenUserSignsOut().then(() => { be.signedIn = false; be.me = null; onAuthChange(be); container.whenUserSignsIn().then(handleIdentity); });
     } else {
       be.signedIn = false; be.me = null; onAuthChange(be);
@@ -577,7 +579,7 @@ const other = (r) => (r === "X" ? "O" : "X");
 
 ui.canPlace = () => {
   const r = myRole();
-  return !!(r && bothJoined() && !state.winner && state.turn === r && !busy && !replay);
+  return !!(r && bothJoined() && !state.winner && !state.closedBy && state.turn === r && !busy && !replay);
 };
 
 ui.onTapCell = (cell) => {
@@ -822,6 +824,9 @@ function render() {
   let status;
   if (statusError) status = statusError;
   else if (!loaded) status = "Loading game…";
+  else if (state.closedBy) status = !state.players.O
+    ? (role === state.closedBy ? "You cancelled this invite." : "This invite was cancelled.")
+    : (role === state.closedBy ? "You ended this game." : `${nameOf(state.closedBy)} ended this game.`);
   else if (replay) status = "Replaying the round — scrub to any move.";
   else if (!bothJoined()) status = role === "X" ? "Waiting for your friend to open the link…" : backend?.signedIn ? "Joining…" : "A seat is open — sign in with Apple to play.";
   else if (state.winner) {
@@ -841,16 +846,29 @@ function render() {
   $("replay").hidden = !inReplay;
   $("placeBtn").hidden = inReplay || !(preview >= 0 && ui.canPlace());
   const opp = role ? other(role) : "O";
-  const canAgain = !inReplay && role && state.winner && !state.ready[role] && !resultOpen;
+  const closed = !!state.closedBy;
+  const canAgain = !closed && !inReplay && role && state.winner && !state.ready[role] && !resultOpen;
   $("againBtn").hidden = !canAgain;
   $("againBtn").textContent = backend?.demo ? "Play again" : state.ready[opp] ? "Accept rematch" : "Ask for a rematch";
   $("resultBtn").hidden = inReplay || !state.winner || resultOpen;
-  const canResign = !inReplay && role && bothJoined() && !state.winner;
+  const canResign = !closed && !inReplay && role && bothJoined() && !state.winner;
+  const canEnd = !closed && !inReplay && role && !backend?.demo;
+  $("endWrap").hidden = !canEnd;
+  if (!canEnd) setEndConfirm(false);
+  $("endBtn").textContent = bothJoined() ? "End game" : "Cancel invite";
+  $("endYes").textContent = bothJoined() ? "End game" : "Cancel invite";
+  $("endQ").textContent = bothJoined() ? "End it for both of you?" : "Cancel the invite? The link stops working.";
   $("resignWrap").hidden = !canResign;
   if (!canResign) setResignConfirm(false);
-  $("chat").hidden = inReplay || !(role && bothJoined());
+  $("chat").hidden = closed || inReplay || !(role && bothJoined());
   $("signin").hidden = !!backend?.signedIn || backend?.demo || !backend;
   if (resultOpen) renderResult();
+}
+
+function setEndConfirm(on) {
+  $("endBtn").hidden = on;
+  $("endConfirm").hidden = !on;
+  if (on) $("endNo").focus({ preventScroll: true });
 }
 
 function setResignConfirm(on) {
@@ -895,7 +913,7 @@ const pickedIn = (fieldset) => fieldset.querySelector("input:checked")?.value;
 let asking = false;
 function maybeAskToJoin() {
   if (!backend || backend.demo || !backend.signedIn || !loaded || asking) return;
-  if (myRole() || bothJoined()) return;
+  if (myRole() || bothJoined() || state.closedBy) return;
   const name = myName(), color = myColor();
   if (name && color) {
     asking = true;
@@ -934,8 +952,12 @@ addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if (resultOpen) closeResult();
   else if (!$("resignConfirm").hidden) setResignConfirm(false);
+  else if (!$("endConfirm").hidden) setEndConfirm(false);
 });
 $("resignBtn").addEventListener("click", () => setResignConfirm(true));
+$("endBtn").addEventListener("click", () => setEndConfirm(true));
+$("endNo").addEventListener("click", () => { setEndConfirm(false); $("endBtn").focus({ preventScroll: true }); });
+$("endYes").addEventListener("click", () => { setEndConfirm(false); setPreview(-1); send({ kind: "close" }); });
 $("resignNo").addEventListener("click", () => { setResignConfirm(false); $("resignBtn").focus({ preventScroll: true }); });
 $("resignYes").addEventListener("click", () => { setResignConfirm(false); setPreview(-1); send({ kind: "resign" }); });
 $("replayPlay").addEventListener("click", () => (replay?.timer ? pauseReplay() : playReplay()));
