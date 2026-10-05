@@ -2,6 +2,6 @@
 // iCloud.com.fbmore.TicTacCube → Tokens & Keys (sign-in callback: post message).
 export const CONFIG = {
   containerIdentifier: "iCloud.com.fbmore.TicTacCube",
-  apiToken: "REPLACE_WITH_CLOUDKIT_JS_API_TOKEN",
+  apiToken: "8432b114045c4bdd80508495488b296330a3cd94799b5c7f9fbb58a0acfca9bd",
   environment: "development",
 };
