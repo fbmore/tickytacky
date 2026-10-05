@@ -27,7 +27,7 @@
     <div class="landing-card">
       <div class="logo" aria-hidden="true"><span class="dot x"></span><span class="dot o"></span></div>
       <h1>Tic Tac Cube</h1>
-      <p>Tic-tac-toe, but in three dimensions. Four in a row — across, down, through, or corner to corner on a 4×4×4 cube.</p>
+      <p>Tic-tac-toe, but in three dimensions. Get a full row — across, down, through, or corner to corner — on a 3×3×3, 4×4×4 or 5×5×5 cube.</p>
       <p class="muted">Games start from the iPhone app: a friend sends you a link, you open it here and play. No account needed to watch; sign in with your Apple ID to make moves.</p>
       <div class="landing-actions">
         <a class="btn primary" href="?demo=1">Try it on this device</a>
@@ -40,7 +40,7 @@
   <section id="hud" class="hud" hidden>
     <header class="topbar">
       <div class="player" id="pX" data-mark="X">
-        <span class="chip-dot x" aria-hidden="true"></span>
+        <span class="chip-dot" data-mark="X" aria-hidden="true"></span>
         <div class="pinfo"><span class="pname" id="nameX">Waiting…</span><span class="prole">X</span></div>
         <span class="score" id="scoreX">0</span>
       </div>
@@ -51,7 +51,7 @@
       <div class="player right" id="pO" data-mark="O">
         <span class="score" id="scoreO">0</span>
         <div class="pinfo"><span class="pname" id="nameO">Waiting…</span><span class="prole">O</span></div>
-        <span class="chip-dot o" aria-hidden="true"></span>
+        <span class="chip-dot" data-mark="O" aria-hidden="true"></span>
       </div>
     </header>
 
@@ -63,6 +63,15 @@
       <div class="action-row">
         <button class="btn primary" id="placeBtn" hidden>Place piece</button>
         <button class="btn primary" id="againBtn" hidden>Play again</button>
+        <button class="btn" id="resultBtn" hidden>See result</button>
+        <span class="resign" id="resignWrap" hidden>
+          <button class="btn ghost" id="resignBtn">Resign</button>
+          <span class="resign-confirm" id="resignConfirm" hidden>
+            <span class="muted small">Give this round away?</span>
+            <button class="btn small danger" id="resignYes">Resign</button>
+            <button class="btn small" id="resignNo">Keep playing</button>
+          </span>
+        </span>
         <div id="signin" class="signin" hidden>
           <div id="apple-sign-in-button"></div>
           <span class="muted small">Sign in with Apple to play</span>
@@ -70,16 +79,31 @@
         <div id="apple-sign-out-button" hidden></div>
       </div>
 
+      <div class="replay" id="replay" hidden>
+        <button class="btn small icon" id="replayPlay" aria-label="Play replay">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>
+        </button>
+        <input type="range" id="replaySlider" min="0" max="0" step="1" value="0" aria-label="Replay position">
+        <span class="replay-count" id="replayCount">0 / 0</span>
+        <button class="btn small" id="replayDone">Done</button>
+      </div>
+
       <div class="chat" id="chat" hidden>
         <div class="chips" id="chips"></div>
-        <form class="say" id="sayForm">
-          <input id="sayInput" maxlength="80" placeholder="Say something…" autocomplete="off" aria-label="Message">
-          <button class="btn small" type="submit">Send</button>
-        </form>
       </div>
 
       <div class="meta-row">
-        <label class="spread"><span>Spread</span><input type="range" id="spread" min="0" max="1" step="0.01" value="0.25" aria-label="Spread layers apart"></label>
+        <span class="tools">
+          <label class="spread"><span>Spread</span><input type="range" id="spread" min="0" max="1" step="0.01" value="0.25" aria-label="Spread layers apart"></label>
+          <button class="toggle" id="soundToggle" aria-pressed="true" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <span>Sound</span>
+          </button>
+          <button class="toggle" id="threatToggle" aria-pressed="false" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+            <span>Threats</span>
+          </button>
+        </span>
         <span class="links">
           <a id="openApp" href="#">Open in app</a>
           <a id="getApp" href="#">Get the iPhone app</a>
@@ -94,12 +118,47 @@
   <!-- Name dialog -->
   <dialog id="nameDialog">
     <form method="dialog" id="nameForm">
-      <h2>What should we call you?</h2>
-      <p class="muted">Your opponent will see this name.</p>
+      <h2>Join the game</h2>
+      <p class="muted">Your opponent will see this name and colour.</p>
       <input id="nameInput" maxlength="24" required autocomplete="nickname" placeholder="Your name">
+      <fieldset class="swatches" id="joinSwatches"><legend>Your colour</legend></fieldset>
       <button class="btn primary" value="ok">Join game</button>
     </form>
   </dialog>
+
+  <!-- Demo setup -->
+  <dialog id="demoDialog">
+    <form method="dialog" id="demoForm">
+      <h2>Pass-and-play demo</h2>
+      <p class="muted">Two players, one device. Pick a cube and your colours.</p>
+      <fieldset class="seg" id="sizeSeg"><legend>Cube</legend></fieldset>
+      <fieldset class="swatches" id="demoSwatchesX"><legend>Player 1</legend></fieldset>
+      <fieldset class="swatches" id="demoSwatchesO"><legend>Player 2</legend></fieldset>
+      <button class="btn primary" value="ok">Start</button>
+    </form>
+  </dialog>
+
+  <!-- End-of-round card -->
+  <div class="result-backdrop" id="result" hidden>
+    <div class="result-card" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+      <div class="result-orb" id="resultOrb" aria-hidden="true"></div>
+      <h2 id="resultTitle">You win!</h2>
+      <p class="result-how" id="resultHow"></p>
+      <div class="result-score">
+        <div><span class="rs-num" id="rsX">0</span><span class="rs-name" id="rsNameX">X</span></div>
+        <span class="rs-dash" aria-hidden="true">–</span>
+        <div><span class="rs-num" id="rsO">0</span><span class="rs-name" id="rsNameO">O</span></div>
+      </div>
+      <ul class="result-next" id="resultNext"></ul>
+      <div class="result-actions">
+        <button class="btn primary" id="resultAgain">Ask for a rematch</button>
+        <div class="result-secondary">
+          <button class="btn" id="resultReplay">Replay</button>
+          <button class="btn ghost" id="resultClose">Look at the cube</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <canvas id="confetti" aria-hidden="true"></canvas>
 
