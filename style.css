@@ -440,3 +440,8 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(-
 .menu-row.toggle[aria-pressed="true"] .switch { background: var(--cx); }
 .menu-row.toggle[aria-pressed="true"] .switch::after { translate: 16px 0; }
 @media (prefers-reduced-motion: reduce) { .pop { transition: none; } }
+
+/* Pieces style picker inside the ⋯ menu */
+.seg-compact { display: flex; gap: 2px; margin: 0; padding: 2px; border: 0; border-radius: 12px; background: var(--glass); }
+.seg-compact .seg-opt span { min-height: 40px; padding: 0 12px; border-radius: 10px; font-size: 13px; }
+#homePieces { margin-top: 4px; }

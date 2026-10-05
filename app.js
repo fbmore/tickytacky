@@ -164,13 +164,71 @@ const pieceMats = {
   X: new THREE.MeshPhysicalMaterial({ color: roleColor.X, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.08 }),
   O: new THREE.MeshPhysicalMaterial({ color: roleColor.O, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.08 }),
 };
-const pieces = new Map(); // cell -> mesh
+const pieces = new Map(); // cell -> Object3D (a sphere mesh, or an X / O group)
 
-const ghost = new THREE.Mesh(pieceGeo, new THREE.MeshPhysicalMaterial({
+// Piece style is a per-browser look preference ("orbs" | "xo"); it never touches the protocol.
+let pieceStyle = store.get("ttc.pieces") === "xo" ? "xo" : "orbs";
+
+// X = two crossed capsules, O = a torus — same sizes as iOS. Both lie in the XY plane and are
+// turned to face the camera every frame, so they read as X and O from any spin angle.
+const shapeCache = new Map();
+function xoShapes(n) {
+  const key = n >= 5 ? 5 : 4;
+  if (!shapeCache.has(key)) {
+    const big = key === 4;
+    const len = big ? 0.62 : 0.56, r = big ? 0.085 : 0.075;
+    const bar = new THREE.CapsuleGeometry(r, len - 2 * r, 8, 24);
+    const ring = new THREE.TorusGeometry(big ? 0.24 : 0.21, big ? 0.075 : 0.065, 24, 72);
+    shapeCache.set(key, { bar, ring });
+  }
+  return shapeCache.get(key);
+}
+
+/** One piece in the current style. `.material` is always the single shared material of its parts. */
+function makePiece(mark, material) {
+  if (pieceStyle === "orbs") return new THREE.Mesh(pieceGeo, material);
+  const { bar, ring } = xoShapes(N);
+  const g = new THREE.Group();
+  if (mark === "X") {
+    for (const a of [Math.PI / 4, -Math.PI / 4]) {
+      const m = new THREE.Mesh(bar, material);
+      m.rotation.z = a;
+      g.add(m);
+    }
+  } else g.add(new THREE.Mesh(ring, material));
+  g.material = material;
+  return g;
+}
+
+const ghostMat = new THREE.MeshPhysicalMaterial({
   color: roleColor.X, transparent: true, opacity: 0.45, roughness: 0.2, clearcoat: 1, depthWrite: false,
-}));
+});
+let ghost = makePiece("X", ghostMat);
+let ghostMark = "X";
 ghost.visible = false;
 board.add(ghost);
+function rebuildGhost(mark) {
+  const visible = ghost.visible;
+  board.remove(ghost);
+  ghost = makePiece(mark, ghostMat);
+  ghostMark = mark;
+  ghost.visible = visible;
+  board.add(ghost);
+}
+
+/** Switch orbs ↔ X & O; rebuilds every piece in place. */
+function setPieceStyle(style) {
+  if (style === pieceStyle) return;
+  pieceStyle = style;
+  store.set("ttc.pieces", style);
+  rebuildGhost(ghostMark);
+  for (const p of pieces.values()) board.remove(p);
+  pieces.clear();
+  syncBoard({ ...view, instant: true });
+  for (const id of ["homePieces", "menuPieces"]) {
+    for (const input of $(id)?.querySelectorAll("input") ?? []) input.checked = input.value === style;
+  }
+}
 
 const ringGeo = new THREE.RingGeometry(0.4, 0.43, 64);
 const ring = new THREE.Mesh(ringGeo,
@@ -213,10 +271,10 @@ function syncBoard(v) {
   for (let i = 0; i < G.cells; i++) {
     const mark = v.board[i];
     let p = pieces.get(i);
-    if (mark && (!p || p.userData.mark !== mark)) {
+    if (mark && (!p || p.userData.mark !== mark || p.userData.n !== N)) {
       if (p) board.remove(p);
-      p = new THREE.Mesh(pieceGeo, pieceMats[mark].clone());
-      p.userData = { cell: i, mark, born: v.instant ? -1e9 : performance.now() };
+      p = makePiece(mark, pieceMats[mark].clone());
+      p.userData = { cell: i, mark, n: N, born: v.instant ? -1e9 : performance.now() };
       board.add(p);
       pieces.set(i, p);
     } else if (!mark && p) {
@@ -244,6 +302,7 @@ function setColors(colors) {
 function setPreview(i, mark) {
   const changed = i !== preview;
   preview = i;
+  if (i >= 0 && pieceStyle === "xo" && mark !== ghostMark) rebuildGhost(mark);
   ghost.visible = i >= 0;
   if (i >= 0) ghost.material.color.copy(roleColor[mark]);
   if (changed && i >= 0) sound.tick();
@@ -263,8 +322,10 @@ function layout(now) {
     slots[i].material.opacity = i === hover ? 0.85 : 0.4;
   }
   const pulse = reduceMotion ? 0 : Math.sin(now / 320);
+  const face = pieceStyle === "xo"; // billboard X and O toward the camera (the board itself never rotates)
   for (const p of pieces.values()) {
     cellPos(p.userData.cell, p.position);
+    if (face) p.quaternion.copy(camera.quaternion);
     const t = Math.min(1, (now - p.userData.born) / 420);
     const e = reduceMotion ? 1 : easeOutBack(t);
     const win = view.winLine?.includes(p.userData.cell);
@@ -275,6 +336,7 @@ function layout(now) {
   }
   if (preview >= 0) {
     cellPos(preview, ghost.position);
+    if (face) ghost.quaternion.copy(camera.quaternion);
     ghost.scale.setScalar(0.92 + 0.05 * Math.sin(now / 160));
   }
   if (view.lastMove != null && !view.winLine) {
@@ -1129,6 +1191,10 @@ $("threatToggle").addEventListener("click", () => {
   syncBoard({ ...currentView(), instant: true });
 });
 
+// Pieces style: in-game ⋯ menu (the home copy is wired in initHome).
+const PIECE_OPTIONS = [["orbs", "Orbs"], ["xo", "X & O"]];
+segPicker($("menuPieces"), "menuPiecesPick", PIECE_OPTIONS, pieceStyle, (v) => setPieceStyle(v));
+
 for (const p of PRESETS) {
   const b = document.createElement("button");
   b.className = "chip"; b.type = "button"; b.textContent = p;
@@ -1424,6 +1490,7 @@ function bootHome() {
   swatchPicker($("homeSwatches2"), "homeColor2", prefs.color2, (c) => store.set("ttc.color2", c));
   paint2();
   segPicker($("homeSize"), "homeSizePick", SIZES.map((n) => [n, `${n}×${n}×${n}`]), prefs.size, (n) => { store.set("ttc.size", n); renderHomeChrome(); showcase(); });
+  segPicker($("homePieces"), "homePiecesPick", PIECE_OPTIONS, pieceStyle, (v) => setPieceStyle(v));
   const homeToggle = (id, on, set) => {
     setToggle(id, on);
     $(id).addEventListener("click", () => { const v = $(id).getAttribute("aria-pressed") !== "true"; setToggle(id, v); set(v); });

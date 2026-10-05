@@ -67,6 +67,7 @@
           <input id="homeName2" maxlength="24" placeholder="Player 2">
         </label>
         <fieldset class="swatches" id="homeSwatches2"><legend>Their colour</legend></fieldset>
+        <fieldset class="seg" id="homePieces"><legend>Pieces</legend></fieldset>
         <div class="home-toggles">
           <button class="toggle" id="homeSound" aria-pressed="true" type="button">Sound</button>
           <button class="toggle" id="homeThreats" aria-pressed="false" type="button">Show threats</button>
@@ -156,6 +157,9 @@
             <option value="relaxed">Relaxed</option><option value="clever">Clever</option><option value="ruthless">Ruthless</option>
           </select>
         </label>
+        <div class="menu-row pieces"><span id="menuPiecesLabel">Pieces</span>
+          <fieldset class="seg seg-compact" id="menuPieces" aria-labelledby="menuPiecesLabel"></fieldset>
+        </div>
         <button class="menu-row toggle" id="threatToggle" aria-pressed="false" type="button">
           <span>Show threats</span><span class="switch" aria-hidden="true"></span>
         </button>
