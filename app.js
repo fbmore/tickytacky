@@ -1088,6 +1088,7 @@ setToggle("soundToggle", sound.on);
 setToggle("threatToggle", showThreats);
 $("soundToggle").addEventListener("click", () => {
   sound.on = !sound.on; store.set("ttc.sound", sound.on ? "1" : "0"); setToggle("soundToggle", sound.on);
+  if ($("homeSound")) setToggle("homeSound", sound.on);
   if (sound.on) { sound.unlock(); sound.tick(); }
 });
 $("threatToggle").addEventListener("click", () => {
@@ -1329,8 +1330,9 @@ function bootHome() {
     setToggle(id, on);
     $(id).addEventListener("click", () => { const v = $(id).getAttribute("aria-pressed") !== "true"; setToggle(id, v); set(v); });
   };
-  homeToggle("homeSound", sound.on, (v) => { sound.on = v; store.set("ttc.sound", v ? "1" : "0"); if (v) { sound.unlock(); sound.tick(); } });
-  homeToggle("homeThreats", showThreats, (v) => { showThreats = v; store.set("ttc.threats", v ? "1" : "0"); });
+  // Home and in-game switches share one setting, so keep both in sync.
+  homeToggle("homeSound", sound.on, (v) => { sound.on = v; store.set("ttc.sound", v ? "1" : "0"); setToggle("soundToggle", v); if (v) { sound.unlock(); sound.tick(); } });
+  homeToggle("homeThreats", showThreats, (v) => { showThreats = v; store.set("ttc.threats", v ? "1" : "0"); setToggle("threatToggle", v); });
 
   $("playFriend").addEventListener("click", () => {
     location.href = `?g=${newGameId()}&host=${prefs.size}`;
