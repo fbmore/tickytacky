@@ -527,8 +527,10 @@ async function cloudBackend(onAuthChange) {
   }
 
   be.start = (onEvents, onError) => {
+    let first = true;
     const tick = async () => {
-      try { if (await fetchNew()) onEvents([...seen.values()]); }
+      // Always report the first successful fetch, even an empty game, so the page stops "loading".
+      try { if ((await fetchNew()) || first) onEvents([...seen.values()]); first = false; }
       catch (err) { onError(err); }
       setTimeout(tick, document.hidden ? 8000 : 3000);
     };
