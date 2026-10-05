@@ -102,16 +102,8 @@
     <footer class="bottom">
       <p class="status" id="status" aria-live="polite">Loading game…</p>
 
-      <div class="share" id="sharePanel" hidden>
-        <span class="share-label small muted">Send this link to your friend</span>
-        <div class="share-row">
-          <input id="shareLink" readonly aria-label="Game link">
-          <button class="btn small" id="copyLink" type="button">Copy</button>
-          <button class="btn small primary" id="shareLinkBtn" type="button" hidden>Share…</button>
-        </div>
-      </div>
-
       <div class="action-row">
+        <button class="btn primary" id="inviteBtn" type="button" hidden>Invite a friend</button>
         <button class="btn primary" id="placeBtn" hidden>Place piece</button>
         <button class="btn primary" id="againBtn" hidden>Play again</button>
         <button class="btn" id="resultBtn" hidden>See result</button>
@@ -182,13 +174,39 @@
   <!-- Name dialog -->
   <dialog id="nameDialog">
     <form method="dialog" id="nameForm">
-      <h2>Join the game</h2>
+      <h2 id="nameTitle">Join the game</h2>
       <p class="muted">Your opponent will see this name and colour.</p>
       <input id="nameInput" maxlength="24" required autocomplete="nickname" placeholder="Your name">
       <fieldset class="swatches" id="joinSwatches"><legend>Your colour</legend></fieldset>
-      <button class="btn primary" value="ok">Join game</button>
+      <div class="dialog-actions">
+        <button class="btn ghost" value="cancel" id="nameCancel" formnovalidate hidden>Cancel</button>
+        <button class="btn primary" value="ok" id="nameOk">Join game</button>
+      </div>
     </form>
   </dialog>
+
+  <!-- Invite card: link, copy, share, what happens next -->
+  <div class="invite-backdrop" id="invite" hidden>
+    <div class="invite-card" role="dialog" aria-modal="true" aria-labelledby="inviteTitle">
+      <span class="invite-grip" aria-hidden="true"></span>
+      <h2 id="inviteTitle">Invite a friend</h2>
+      <p class="muted" id="inviteLead">Your game is ready. Send this link to the person you want to play.</p>
+      <button class="invite-link" id="inviteLink" type="button" aria-label="Copy game link">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span id="inviteUrl"></span>
+      </button>
+      <div class="invite-actions">
+        <button class="btn primary" id="inviteCopy" type="button">Copy link</button>
+        <button class="btn" id="inviteShare" type="button" hidden>Share…</button>
+      </div>
+      <ol class="invite-steps">
+        <li><b>Send the link</b><span>Messages, WhatsApp, email — anything works.</span></li>
+        <li><b>They open it</b><span>With the iPhone app it opens right in the game. Otherwise they play here in the browser after signing in with Apple.</span></li>
+        <li><b>Take turns, any time</b><span>No rush, no timer. Keep this tab around — its title shows “● Your move” when it’s your turn.</span></li>
+      </ol>
+      <button class="btn ghost invite-done" id="inviteDone" type="button">Done</button>
+    </div>
+  </div>
 
   <!-- End-of-round card -->
   <div class="result-backdrop" id="result" hidden>

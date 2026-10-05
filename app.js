@@ -654,6 +654,8 @@ let backend = null;
 let state = fold([]);
 let events = [];
 let loaded = false;
+let inviteOpen = false;   // invite card visible
+let inviteShown = false;  // auto-opened once for a new game
 const toastedIds = new Set();
 let lastWinnerKey = null;
 let busy = false;
@@ -986,8 +988,15 @@ function render() {
   $("homeBtn").hidden = !(closed || (state.winner && !resultOpen && !inReplay));
   $("levelWrap").hidden = !vsComputer();
   const host = role === "X" && !bothJoined() && !closed && !offline() && loaded;
-  $("sharePanel").hidden = !host;
-  if (host) $("shareLink").value = shareUrl();
+  $("inviteBtn").hidden = !host || inviteOpen;
+  if (host && !inviteShown) { inviteShown = true; openInvite(); }   // a new game: show the invite once
+  if (!host && inviteOpen) closeInvite();                            // they joined (or it ended)
+  // Your own name on the scoreboard can be tapped to rename yourself (online games).
+  for (const r of ["X", "O"]) {
+    const mine = r === role && !offline() && !closed;
+    $("name" + r).classList.toggle("editable", mine);
+    $("name" + r).title = mine ? "Change your name or colour" : "";
+  }
   $("openApp").hidden = offline();
   if (resultOpen) renderResult();
 }
@@ -1080,6 +1089,7 @@ $("result").addEventListener("click", (e) => { if (e.target === $("result")) clo
 addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if (resultOpen) closeResult();
+  else if (inviteOpen) closeInvite();
   else if (!$("resignConfirm").hidden) setResignConfirm(false);
   else if (!$("endConfirm").hidden) setEndConfirm(false);
 });
@@ -1145,14 +1155,79 @@ function setLevel(lvl) {
 $("levelSelect").addEventListener("change", (e) => setLevel(e.target.value));
 segPicker($("resultLevel"), "resultLevelPick", LEVELS.map((l) => [l, l[0].toUpperCase() + l.slice(1)]), prefs.level, setLevel);
 
-$("copyLink").addEventListener("click", async () => {
-  const b = $("copyLink");
-  try { await navigator.clipboard.writeText(shareUrl()); b.textContent = "Copied"; }
-  catch { $("shareLink").select(); b.textContent = "Select ⌘C"; }
-  setTimeout(() => { b.textContent = "Copy"; }, 1600);
-});
-$("shareLinkBtn").hidden = !navigator.share;
-$("shareLinkBtn").addEventListener("click", () => navigator.share?.({ title: "Tic Tac Cube", text: "Play 3-D tic-tac-toe with me 🧊", url: shareUrl() }).catch(() => {}));
+/* ── invite card ── */
+function openInvite() {
+  inviteOpen = true;
+  $("inviteUrl").textContent = shareUrl().replace(/^https:\/\//, "");
+  $("inviteLead").textContent = `Your ${N}×${N}×${N} game is ready. Send this link to the person you want to play.`;
+  const el = $("invite");
+  el.hidden = false;
+  void el.offsetWidth;
+  el.classList.add("open");
+  $("inviteCopy").focus({ preventScroll: true });
+  render();
+}
+function closeInvite() {
+  if (!inviteOpen) return;
+  inviteOpen = false;
+  const el = $("invite");
+  el.classList.remove("open");
+  setTimeout(() => { if (!inviteOpen) el.hidden = true; }, reduceMotion ? 0 : 300);
+  render();
+}
+async function copyInvite() {
+  const b = $("inviteCopy");
+  try { await navigator.clipboard.writeText(shareUrl()); b.textContent = "✓ Copied"; navigator.vibrate?.(10); }
+  catch { getSelection().selectAllChildren($("inviteUrl")); b.textContent = "Press ⌘C"; }
+  setTimeout(() => { b.textContent = "Copy link"; }, 1800);
+}
+$("inviteBtn").addEventListener("click", openInvite);
+$("inviteCopy").addEventListener("click", copyInvite);
+$("inviteLink").addEventListener("click", copyInvite);
+$("inviteDone").addEventListener("click", closeInvite);
+$("invite").addEventListener("click", (e) => { if (e.target === $("invite")) closeInvite(); });
+$("inviteShare").hidden = !navigator.share;
+$("inviteShare").addEventListener("click", () => navigator.share?.({ title: "Tic Tac Cube", text: "Play 3-D tic-tac-toe with me 🧊", url: shareUrl() }).catch(() => {}));
+// Swipe the card down to close (touch).
+{
+  let y0 = null, dy = 0;
+  const card = document.querySelector(".invite-card");
+  card.addEventListener("touchstart", (e) => { y0 = e.touches[0].clientY; dy = 0; }, { passive: true });
+  card.addEventListener("touchmove", (e) => {
+    if (y0 == null) return;
+    dy = Math.max(0, e.touches[0].clientY - y0);
+    card.style.transition = "none"; card.style.translate = `0 ${dy}px`;
+  }, { passive: true });
+  card.addEventListener("touchend", () => {
+    card.style.transition = ""; card.style.translate = "";
+    if (dy > 110) closeInvite();
+    y0 = null;
+  });
+}
+
+/* ── rename yourself (tap your name on the scoreboard) ── */
+function editMe() {
+  const role = myRole();
+  if (!role || offline() || state.closedBy) return;
+  const dlg = $("nameDialog");
+  $("nameTitle").textContent = "Your name & colour";
+  $("nameOk").textContent = "Save";
+  $("nameCancel").hidden = false;
+  $("nameInput").value = state.players[role]?.name || myName();
+  const fs = $("joinSwatches");
+  fs.querySelectorAll("label").forEach((l) => l.remove());
+  swatchPicker(fs, "joinColor", state.players[role]?.color || myColor() || "coral");
+  dlg.showModal();
+  dlg.addEventListener("close", () => {
+    $("nameTitle").textContent = "Join the game"; $("nameOk").textContent = "Join game"; $("nameCancel").hidden = true;
+    if (dlg.returnValue !== "ok") return;
+    const v = $("nameInput").value.trim().slice(0, 24), c = pickedIn(fs) || myColor();
+    if (!v) return;
+    store.set("ttc.name", v); store.set("ttc.color", c);
+    if (v !== state.players[role]?.name || c !== state.players[role]?.color) send({ kind: "join", text: v, color: c, cell: -1 });
+  }, { once: true });
+}
+for (const r of ["X", "O"]) $("name" + r).addEventListener("click", () => { if (myRole() === r) editMe(); });
 
 function segPicker(fieldset, name, options, selected, onChange) {
   for (const [value, text] of options) {
