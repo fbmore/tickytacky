@@ -6,11 +6,15 @@ import {
   geometry, fold, roleOf, PRESETS, PALETTE, hexOf, resolveColors, sortEvents,
   boardAt, threats, describeLine, starterFor, SIZES,
 } from "./game.js";
+import { decide, LEVELS, BANTER } from "./ai.js";
 
 const params = new URLSearchParams(location.search);
 const GAME_ID = (params.get("g") || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 32);
 const SEAT2 = params.get("seat") === "2"; // testing: second seat with the same Apple Account
-const DEMO = params.has("demo");
+const DEMO = params.has("demo"); // old link: same as ?play=local
+// ?play=ai → against the computer, ?play=local → two players on this device (no account for either).
+const PLAY = GAME_ID ? null : DEMO || params.get("play") === "local" ? "local" : params.get("play") === "ai" ? "ai" : null;
+const HOST_SIZE = Number(params.get("host")) || 0; // set when this browser just created the game
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $ = (id) => document.getElementById(id);
 
@@ -415,36 +419,101 @@ function tickConfetti() {
 /* ───────────────────────────── backends ───────────────────────────── */
 
 // Each backend: { start(onEvents), save(fields) -> Promise<event>, me, signedIn }
-function demoBackend({ size, colorX, colorO }) {
-  const events = [];
-  let ts = Date.now(), n = 0;
+
+const SIZE_NOTES = {
+  3: "Quick and chaotic: whoever starts has the edge.",
+  4: "The classic. Deep, but a game takes a few minutes.",
+  5: "Big and strategic. Room for long plans.",
+};
+const prefs = {
+  get size() { return SIZES.includes(Number(store.get("ttc.size"))) ? Number(store.get("ttc.size")) : 4; },
+  get color() { return store.get("ttc.color") || "coral"; },
+  get name2() { return store.get("ttc.name2") || "Player 2"; },
+  get color2() { const c = store.get("ttc.color2"); return c && c !== prefs.color ? c : resolveColors(prefs.color, "teal").O; },
+  get level() { return LEVELS.includes(store.get("ttc.level")) ? store.get("ttc.level") : "clever"; },
+};
+
+/** Games without an account, kept in this browser: against the computer, or pass-and-play. */
+function localBackend(mode) {
+  const key = `ttc.local.${mode}`;
+  const size = prefs.size;
+  const ai = mode === "ai";
+  const xName = myName() || (ai ? "You" : "Player 1");
+  const xColor = prefs.color;
+  const oName = ai ? "Computer" : prefs.name2;
+  const oColor = ai ? resolveColors(xColor, xColor === "teal" ? "coral" : "teal").O : prefs.color2;
+  let saved = null;
+  try { saved = JSON.parse(store.get(key) || "null"); } catch {}
+  let events = saved && saved.size === size && Array.isArray(saved.events) ? saved.events : [];
+  let ts = Math.max(Date.now(), ...events.map((e) => e.ts)), n = events.length;
   const mk = (author, authorName, kind, extra = {}) => ({
-    recordName: `demo-${++n}`, author, authorName, kind, round: 0, cell: -1, text: "", color: "", ts: ++ts, ...extra,
+    recordName: `local-${++n}`, author, authorName, kind, round: 0, cell: -1, text: "", color: "", ts: ++ts, ...extra,
   });
-  events.push(
-    mk("demo-x", "Player 1", "join", { text: "Player 1", cell: size, color: colorX }),
-    mk("demo-o", "Player 2", "join", { text: "Player 2", color: colorO }),
-  );
-  let cb;
+  if (!events.length) {
+    events.push(mk("local-x", xName, "join", { text: xName, cell: size, color: xColor }),
+                mk("local-o", oName, "join", { text: oName, color: oColor }));
+  } else {
+    // Names and colours follow the current settings.
+    Object.assign(events[0], { text: xName, color: xColor });
+    Object.assign(events[1], { text: oName, color: oColor });
+  }
+  const persist = () => store.set(key, JSON.stringify({ size, events }));
+  persist();
+
+  let cb, thinking = false, lastBanter = 0;
   const be = {
-    demo: true, signedIn: true, me: "demo-x",
-    start(onEvents) { cb = onEvents; onEvents(events.slice()); },
+    local: true, mode, signedIn: true, me: "local-x",
+    level: prefs.level,
+    get thinking() { return thinking; },
+    onSay: null,
+    start(onEvents) { cb = onEvents; emit(); },
     async save(f) {
-      const e = mk(f.author, f.authorName, f.kind, f);
-      e.ts = ++ts;
-      events.push(e);
-      // Hot-seat: whoever must act next becomes "me".
-      const s = fold(events);
-      if (f.kind === "again") {
-        const other = roleOf(s, f.author) === "X" ? s.players.O : s.players.X;
-        if (s.winner && other) events.push(mk(other.id, other.name, "again", { round: s.round }));
+      const before = fold(events);
+      events.push(mk(f.author, f.authorName, f.kind, f));
+      let s = fold(events);
+      // The other side always agrees to another round.
+      if (f.kind === "again" && s.winner) {
+        const o = roleOf(s, f.author) === "X" ? s.players.O : s.players.X;
+        if (o) events.push(mk(o.id, o.name, "again", { round: s.round }));
       }
-      const s2 = fold(events);
-      be.me = s2.players[s2.turn].id;
-      cb(events.slice());
-      return e;
+      s = fold(events);
+      if (ai) {
+        if (!before.winner && s.winner && f.kind === "move") say(s.winner === "X" ? BANTER.youWin : s.winner === "draw" ? BANTER.draw : BANTER.aiWins, true);
+        if (f.kind === "resign") say(BANTER.resigned, true);
+      }
+      emit();
+      return { event: events[events.length - 1], all: events.slice() };
     },
   };
+  function emit() {
+    const s = fold(events);
+    if (!ai && s.players[s.turn]) be.me = s.players[s.turn].id; // whoever must act next is "me"
+    persist();
+    cb?.(events.slice());
+    if (ai && !s.winner && s.turn === "O" && !thinking) think();
+  }
+  function say(lines, always = false) {
+    const now = Date.now();
+    if (!always && (now - lastBanter < 12000 || Math.random() >= 0.7)) return;
+    lastBanter = now;
+    be.onSay?.({ recordName: `say-${now}`, author: "local-o", authorName: "Computer", kind: "say", text: lines[Math.floor(Math.random() * lines.length)] });
+  }
+  function think() {
+    thinking = true;
+    cb?.(events.slice());
+    setTimeout(() => {
+      const s = fold(events);
+      thinking = false;
+      if (s.winner || s.turn !== "O") { cb?.(events.slice()); return; }
+      const d = decide(s.board, s.size, "O", be.level);
+      if (!d) return;
+      events.push(mk("local-o", "Computer", "move", { round: s.round, cell: d.cell }));
+      const after = fold(events);
+      if (after.winner) say(after.winner === "O" ? BANTER.aiWins : after.winner === "draw" ? BANTER.draw : BANTER.youWin, true);
+      else if (BANTER[d.mood]) say(BANTER[d.mood]);
+      emit();
+    }, 650 + Math.random() * 450);
+  }
   return be;
 }
 
@@ -467,7 +536,11 @@ function toEvent(r) {
   };
 }
 
-async function cloudBackend(onAuthChange) {
+let ckSetup = null;
+/** Configure CloudKit once; `auth` tracks the signed-in player. */
+function cloudSetup(onAuthChange) {
+  if (ckSetup) return ckSetup;
+  ckSetup = (async () => {
   if (!CONFIG.apiToken || CONFIG.apiToken.startsWith("REPLACE")) {
     throw new Error("This game server isn't set up yet (missing CloudKit API token).");
   }
@@ -497,33 +570,60 @@ async function cloudBackend(onAuthChange) {
       container.whenUserSignsIn().then(handleIdentity);
     }
   };
-  container.setUpAuth().then(handleIdentity).catch((err) => { console.warn("auth", err); onAuthChange(be); });
+  be.ready = container.setUpAuth().then(handleIdentity).catch((err) => {
+    console.warn("auth", err);
+    be.authError = true; // e.g. Apple sign-in unavailable on this domain or blocked by the browser
+    onAuthChange(be);
+  });
+  return { container, db, auth: be };
+  })();
+  return ckSetup;
+}
 
+async function queryGame(db, gameId, since = 0) {
+  const out = [];
+  let res = await db.performQuery({
+    recordType: "Event",
+    filterBy: [
+      { fieldName: "game", comparator: "EQUALS", fieldValue: { value: gameId } },
+      { fieldName: "ts", comparator: "GREATER_THAN_OR_EQUALS", fieldValue: { value: Math.max(0, since) } },
+    ],
+    sortBy: [{ fieldName: "ts", ascending: true }],
+  }, { resultsLimit: 200 });
+  for (;;) {
+    if (res.hasErrors) throw res.errors[0];
+    out.push(...res.records.map(toEvent));
+    if (!res.moreRecordsComing) break;
+    res = await db.performQuery(res);
+  }
+  return out;
+}
+
+async function saveEvent(db, gameId, f) {
+  const res = await db.saveRecords([{
+    recordType: "Event",
+    fields: {
+      game: { value: gameId }, kind: { value: f.kind }, round: { value: f.round ?? 0 },
+      cell: { value: f.cell ?? -1 }, text: { value: f.text ?? "" }, author: { value: f.author },
+      authorName: { value: f.authorName ?? "" }, color: { value: f.color ?? "" }, ts: { value: Date.now() },
+    },
+  }]);
+  if (res.hasErrors) throw res.errors[0];
+  return toEvent(res.records[0]);
+}
+
+async function cloudBackend(onAuthChange) {
+  const { db, auth: be } = await cloudSetup(onAuthChange);
   const seen = new Map();
   let since = 0;
   async function fetchNew() {
-    const query = {
-      recordType: "Event",
-      filterBy: [
-        { fieldName: "game", comparator: "EQUALS", fieldValue: { value: GAME_ID } },
-        // Overlap window absorbs small clock skew between players; dedupe by recordName.
-        { fieldName: "ts", comparator: "GREATER_THAN_OR_EQUALS", fieldValue: { value: Math.max(0, since - 120000) } },
-      ],
-      sortBy: [{ fieldName: "ts", ascending: true }],
-    };
-    let res = await db.performQuery(query, { resultsLimit: 200 });
+    // Overlap window absorbs small clock skew between players; dedupe by recordName.
     let added = false;
-    for (;;) {
-      if (res.hasErrors) throw res.errors[0];
-      for (const r of res.records) {
-        if (seen.has(r.recordName)) continue;
-        const e = toEvent(r);
-        seen.set(r.recordName, e);
-        since = Math.max(since, e.ts);
-        added = true;
-      }
-      if (!res.moreRecordsComing) break;
-      res = await db.performQuery(res);
+    for (const e of await queryGame(db, GAME_ID, since - 120000)) {
+      if (seen.has(e.recordName)) continue;
+      seen.set(e.recordName, e);
+      since = Math.max(since, e.ts);
+      added = true;
     }
     return added;
   }
@@ -539,17 +639,7 @@ async function cloudBackend(onAuthChange) {
     tick();
   };
   be.save = async (f) => {
-    const record = {
-      recordType: "Event",
-      fields: {
-        game: { value: GAME_ID }, kind: { value: f.kind }, round: { value: f.round ?? 0 },
-        cell: { value: f.cell ?? -1 }, text: { value: f.text ?? "" }, author: { value: f.author },
-        authorName: { value: f.authorName ?? "" }, color: { value: f.color ?? "" }, ts: { value: Date.now() },
-      },
-    };
-    const res = await db.saveRecords([record]);
-    if (res.hasErrors) throw res.errors[0];
-    const e = toEvent(res.records[0]);
+    const e = await saveEvent(db, GAME_ID, f);
     seen.set(e.recordName, e);
     since = Math.max(since, e.ts);
     return { event: e, all: [...seen.values()] };
@@ -575,6 +665,10 @@ function myName() { return store.get("ttc.name") || ""; }
 function myColor() { return store.get("ttc.color") || ""; }
 function nameOf(role) { return state.players[role]?.name || (role === "X" ? "Player X" : "Player O"); }
 const bothJoined = () => state.players.X && state.players.O;
+// Two people on this device: names, not "you".
+const hotseat = () => backend?.mode === "local";
+const offline = () => !!backend?.local;
+const vsComputer = () => backend?.mode === "ai";
 const other = (r) => (r === "X" ? "O" : "X");
 
 ui.canPlace = () => {
@@ -597,7 +691,7 @@ function nudge() {
 
 async function send(fields) {
   const f = { author: backend.me, authorName: myName() || nameOf(myRole() ?? "X"), round: state.round, cell: -1, text: "", color: "", ...fields };
-  if (backend.demo) { f.authorName = nameOf(roleOf(state, f.author)); return backend.save(f); }
+  if (backend.local) { f.authorName = nameOf(roleOf(state, f.author)); return backend.save(f); }
   // Optimistic local event so the board responds instantly.
   const temp = { ...f, recordName: `~local-${Math.random()}`, ts: Date.now() };
   ingest([...events, temp]);
@@ -629,10 +723,13 @@ function currentView() {
 }
 
 function ingest(list) {
+  connError = null;
   events = sortEvents(list);
   const prev = state;
   state = fold(events);
-  if (state.size !== N) buildBoard(state.size);
+  // Before the host's first join lands, show the size they picked.
+  const want = state.sizeSet ? state.size : SIZES.includes(HOST_SIZE) ? HOST_SIZE : state.size;
+  if (want !== N) buildBoard(want);
   setColors(state.colors);
   if (replay && (state.round !== prev.round || !state.winner)) stopReplay(false);
   syncBoard(currentView());
@@ -658,6 +755,10 @@ function ingest(list) {
   if (!wk && resultOpen) closeResult();
   lastWinnerKey = wk;
   if (!loaded) loaded = true;
+  if (GAME_ID && myRole()) {
+    rememberGame(GAME_ID, { opp: nameOf(other(myRole())), closed: !!state.closedBy });
+    if (HOST_SIZE && state.players.X) history.replaceState(null, "", shareUrl() + (SEAT2 ? "&seat=2" : ""));
+  }
   render();
   maybeAskToJoin();
 }
@@ -665,7 +766,7 @@ function ingest(list) {
 function celebrate() {
   const role = myRole();
   if (state.winner !== "draw") {
-    const won = backend?.demo || !role || role === state.winner;
+    const won = hotseat() || !role || role === state.winner;
     if (won) {
       sound.win();
       const hex = hexOf(state.colors[state.winner]);
@@ -706,7 +807,7 @@ function closeResult() {
 
 function renderResult() {
   const role = myRole();
-  const demo = !!backend?.demo;
+  const demo = hotseat();
   const w = state.winner;
   const n = N;
   let title, how;
@@ -718,7 +819,7 @@ function renderResult() {
     how = `${role === w && !demo ? "You take" : `${nameOf(w)} takes`} the round.`;
   } else {
     const iWon = role === w && !demo;
-    title = iWon ? "You win!" : `${nameOf(w)} wins`;
+    title = iWon ? "You win!" : `${nameOf(w)} wins${demo ? "!" : ""}`;
     how = `${iWon ? "" : `${nameOf(w)} got `}${n} in a row ${describeLine(state.winLine, n)}.`;
     how = how[0].toUpperCase() + how.slice(1);
   }
@@ -733,7 +834,7 @@ function renderResult() {
 
   const next = [];
   const opp = role ? other(role) : null;
-  if (role && !demo) {
+  if (role && !offline()) {
     if (state.ready[role] && !state.ready[opp]) next.push(["wait", `Waiting for ${nameOf(opp)} to accept. You can close this and look at the cube, or send a message.`]);
     else if (state.ready[opp]) next.push(["wave", `${nameOf(opp)} wants another round.`]);
     else next.push(["again", `Ask for a rematch — ${nameOf(opp)} can accept whenever they’re ready.`]);
@@ -750,7 +851,9 @@ function renderResult() {
 
   const again = $("resultAgain");
   again.hidden = !role || state.ready[role];
-  again.textContent = demo ? "Play again" : state.ready[opp] ? "Accept rematch" : "Ask for a rematch";
+  again.textContent = offline() ? "Play again" : state.ready[opp] ? "Accept rematch" : "Ask for a rematch";
+  $("resultLevel").hidden = !vsComputer();
+  if (vsComputer()) setLevelUI();
   $("resultReplay").hidden = state.moves.length === 0;
 }
 
@@ -802,6 +905,7 @@ function updateReplayButton() {
 /* ── render ── */
 
 let statusError = null;
+let connError = null; // until the first successful fetch
 function showStatusError(msg) { statusError = msg; render(); setTimeout(() => { statusError = null; render(); }, 4000); }
 
 function render() {
@@ -818,26 +922,32 @@ function render() {
   if (state.winner === "draw") turn = "Draw";
   else if (state.resigned) turn = `${nameOf(state.resigned)} resigned`;
   else if (state.winner) turn = `${nameOf(state.winner)} wins`;
-  else if (bothJoined()) turn = role === state.turn && !backend?.demo ? "Your move" : `${nameOf(state.turn)}’s move`;
+  else if (bothJoined()) turn = role === state.turn && !hotseat() ? "Your move" : `${nameOf(state.turn)}’s move`;
   $("turn").textContent = turn;
 
   let status;
   if (statusError) status = statusError;
+  else if (connError) status = connError;
   else if (!loaded) status = "Loading game…";
   else if (state.closedBy) status = !state.players.O
     ? (role === state.closedBy ? "You cancelled this invite." : "This invite was cancelled.")
     : (role === state.closedBy ? "You ended this game." : `${nameOf(state.closedBy)} ended this game.`);
   else if (replay) status = "Replaying the round — scrub to any move.";
-  else if (!bothJoined()) status = role === "X" ? "Waiting for your friend to open the link…" : backend?.signedIn ? "Joining…" : "A seat is open — sign in with Apple to play.";
+  else if (!bothJoined()) status = role === "X" ? "Waiting for your friend to open the link…"
+    : backend?.signedIn ? "Joining…"
+    : backend?.authError ? "Apple sign-in isn’t available here right now. You can still play the computer from Home."
+    : HOST_SIZE && !events.length ? "Sign in with Apple to start your game — then send your friend the link."
+    : "A seat is open — sign in with Apple to play.";
   else if (state.winner) {
     const opp = role ? other(role) : null;
     if (role && state.ready[role] && !state.ready[opp]) status = `Waiting for ${nameOf(opp)} to accept…`;
     else if (role && state.ready[opp]) status = `${nameOf(opp)} wants another round.`;
     else if (state.winner === "draw") status = "The cube is full — it’s a draw.";
     else if (state.resigned) status = `${nameOf(state.resigned)} resigned this round.`;
-    else status = role === state.winner && !backend?.demo ? `You got ${N} in a row!` : `${nameOf(state.winner)} got ${N} in a row.`;
+    else status = role === state.winner && !hotseat() ? `You got ${N} in a row!` : `${nameOf(state.winner)} got ${N} in a row.`;
   } else if (!role) status = `Watching ${nameOf("X")} vs ${nameOf("O")}.`;
-  else if (backend?.demo) status = `${nameOf(state.turn)}’s move (pass-and-play)` + (preview >= 0 ? " — tap again to place." : "");
+  else if (hotseat()) status = `${nameOf(state.turn)}, your move` + (preview >= 0 ? " — tap again to place." : "");
+  else if (vsComputer() && state.turn === "O") status = "The computer is thinking…";
   else if (state.turn === role) status = preview >= 0 ? "Tap again to place — or pick another slot." : "Your move — spin the cube and tap a slot.";
   else status = `Waiting for ${nameOf(state.turn)}…`;
   $("status").textContent = status;
@@ -849,10 +959,10 @@ function render() {
   const closed = !!state.closedBy;
   const canAgain = !closed && !inReplay && role && state.winner && !state.ready[role] && !resultOpen;
   $("againBtn").hidden = !canAgain;
-  $("againBtn").textContent = backend?.demo ? "Play again" : state.ready[opp] ? "Accept rematch" : "Ask for a rematch";
+  $("againBtn").textContent = offline() ? "Play again" : state.ready[opp] ? "Accept rematch" : "Ask for a rematch";
   $("resultBtn").hidden = inReplay || !state.winner || resultOpen;
   const canResign = !closed && !inReplay && role && bothJoined() && !state.winner;
-  const canEnd = !closed && !inReplay && role && !backend?.demo;
+  const canEnd = !closed && !inReplay && role && !offline();
   $("endWrap").hidden = !canEnd;
   if (!canEnd) setEndConfirm(false);
   $("endBtn").textContent = bothJoined() ? "End game" : "Cancel invite";
@@ -861,7 +971,14 @@ function render() {
   $("resignWrap").hidden = !canResign;
   if (!canResign) setResignConfirm(false);
   $("chat").hidden = closed || inReplay || !(role && bothJoined());
-  $("signin").hidden = !!backend?.signedIn || backend?.demo || !backend;
+  $("signin").hidden = !!backend?.signedIn || offline() || !backend || !!backend?.authError;
+  $("chat").hidden ||= offline();
+  $("homeBtn").hidden = !(closed || (state.winner && !resultOpen && !inReplay));
+  $("levelWrap").hidden = !vsComputer();
+  const host = role === "X" && !bothJoined() && !closed && !offline() && loaded;
+  $("sharePanel").hidden = !host;
+  if (host) $("shareLink").value = shareUrl();
+  $("openApp").hidden = offline();
   if (resultOpen) renderResult();
 }
 
@@ -884,7 +1001,7 @@ function toast(e) {
   el.dataset.mark = role || "X";
   const who = document.createElement("span");
   who.className = "who";
-  who.textContent = e.author === backend?.me && !backend.demo ? "You" : (e.authorName || nameOf(role));
+  who.textContent = e.author === backend?.me && !hotseat() ? "You" : (e.authorName || nameOf(role));
   el.append(who, document.createTextNode(e.text));
   const box = $("toasts");
   box.append(el);
@@ -912,12 +1029,14 @@ const pickedIn = (fieldset) => fieldset.querySelector("input:checked")?.value;
 
 let asking = false;
 function maybeAskToJoin() {
-  if (!backend || backend.demo || !backend.signedIn || !loaded || asking) return;
+  if (!backend || backend.local || !backend.signedIn || !loaded || asking) return;
   if (myRole() || bothJoined() || state.closedBy) return;
   const name = myName(), color = myColor();
+  // The browser that created this game fixes the cube size with the first join.
+  const hostCell = HOST_SIZE && !events.length ? HOST_SIZE : -1;
   if (name && color) {
     asking = true;
-    send({ kind: "join", text: name, color }).finally(() => { asking = false; });
+    send({ kind: "join", text: name, color, cell: hostCell }).finally(() => { asking = false; });
     return;
   }
   asking = true;
@@ -934,7 +1053,7 @@ function maybeAskToJoin() {
     const c = pickedIn(fs) || "teal";
     if (v) {
       store.set("ttc.name", v); store.set("ttc.color", c);
-      send({ kind: "join", text: v, color: c }).finally(() => { asking = false; });
+      send({ kind: "join", text: v, color: c, cell: hostCell }).finally(() => { asking = false; });
     } else asking = false;
   }, { once: true });
 }
@@ -982,59 +1101,271 @@ for (const p of PRESETS) {
   b.addEventListener("click", () => send({ kind: "say", text: p }));
   $("chips").append(b);
 }
-for (const id of ["getApp", "get-app-landing"]) $(id).addEventListener("click", (e) => e.preventDefault());
+
+/* ───────────────────────────── games list ───────────────────────────── */
+
+const shareUrl = (id = GAME_ID) => `${location.origin}${location.pathname}?g=${id}`;
+function savedGames() { try { return JSON.parse(store.get("ttc.games") || "[]"); } catch { return []; } }
+function setSavedGames(list) { store.set("ttc.games", JSON.stringify(list.slice(0, 40))); }
+function rememberGame(id, patch) {
+  const list = savedGames();
+  const i = list.findIndex((g) => g.id === id);
+  const g = { id, opp: "", t: Date.now(), archived: false, closed: false, ...(i >= 0 ? list[i] : {}), ...patch };
+  if (patch.closed) g.archived = true;
+  else if (!("t" in patch)) g.t = Date.now();
+  if (i >= 0) list.splice(i, 1);
+  list.unshift(g);
+  setSavedGames(list);
+}
+const newGameId = () => Array.from(crypto.getRandomValues(new Uint8Array(10)), (b) => "abcdefghijkmnpqrstuvwxyz23456789"[b % 32]).join("");
+
+/* ───────────────────────────── controls: level + share ───────────────────────────── */
+
+function setLevelUI() {
+  const lvl = backend?.level || prefs.level;
+  $("levelSelect").value = lvl;
+  for (const input of $("resultLevel").querySelectorAll("input")) input.checked = input.value === lvl;
+}
+function setLevel(lvl) {
+  store.set("ttc.level", lvl);
+  if (backend?.local) backend.level = lvl;
+  setLevelUI();
+}
+$("levelSelect").addEventListener("change", (e) => setLevel(e.target.value));
+segPicker($("resultLevel"), "resultLevelPick", LEVELS.map((l) => [l, l[0].toUpperCase() + l.slice(1)]), prefs.level, setLevel);
+
+$("copyLink").addEventListener("click", async () => {
+  const b = $("copyLink");
+  try { await navigator.clipboard.writeText(shareUrl()); b.textContent = "Copied"; }
+  catch { $("shareLink").select(); b.textContent = "Select ⌘C"; }
+  setTimeout(() => { b.textContent = "Copy"; }, 1600);
+});
+$("shareLinkBtn").hidden = !navigator.share;
+$("shareLinkBtn").addEventListener("click", () => navigator.share?.({ title: "Tic Tac Cube", text: "Play 3-D tic-tac-toe with me 🧊", url: shareUrl() }).catch(() => {}));
+
+function segPicker(fieldset, name, options, selected, onChange) {
+  for (const [value, text] of options) {
+    const label = document.createElement("label");
+    label.className = "seg-opt";
+    const input = document.createElement("input");
+    input.type = "radio"; input.name = name; input.value = value; input.checked = String(value) === String(selected);
+    input.addEventListener("change", () => onChange(value));
+    const span = document.createElement("span");
+    span.textContent = text;
+    label.append(input, span);
+    fieldset.append(label);
+  }
+}
+
+/* ───────────────────────────── home ───────────────────────────── */
+
+let homeAuth = null;
+let homeReframe = () => {};
+function showcase() {
+  const n = prefs.size, g = geometry(n), c = Math.floor(n / 2);
+  const cells = [g.idx(c, c, c), g.idx(0, 0, 0), g.idx(c, n - 1, c), g.idx(n - 1, n - 1, n - 1), g.idx(0, c, n - 1),
+    g.idx(n - 1, 0, 0), g.idx(c, 0, c), g.idx(0, n - 1, 0), g.idx(n - 1, c, c)];
+  let evs = [{ recordName: "a", kind: "join", author: "x", ts: 1, cell: n, color: prefs.color },
+             { recordName: "b", kind: "join", author: "o", ts: 2, color: resolveColors(prefs.color, prefs.color === "teal" ? "coral" : "teal").O }];
+  let t = 10;
+  for (const cell of [...new Set(cells)]) {
+    const s0 = fold(evs);
+    const next = [...evs, { recordName: "m" + t, kind: "move", author: s0.turn === "X" ? "x" : "o", round: 0, cell, ts: t++ }];
+    if (!fold(next).winner) evs = next; // never show a finished line on the title screen
+  }
+  const s = fold(evs);
+  if (s.size !== N) { buildBoard(s.size); homeReframe(); }
+  setColors(s.colors);
+  syncBoard({ ...s, lastMove: null, instant: true });
+}
+
+function renderHomeChrome() {
+  document.documentElement.style.setProperty("--me", hexOf(prefs.color));
+  $("sizeNote").textContent = SIZE_NOTES[prefs.size];
+  $("homeTag").textContent = `${["", "", "", "Three", "Four", "Five"][prefs.size]} in a row, in any direction.`;
+}
+
+const STATUS_LABEL = { mine: "Your move", theirs: "Their move", waiting: "Waiting for them to join", rematch: "Wants a rematch", over: "Round over", ended: "Ended" };
+const summaries = new Map();
+
+function renderGames() {
+  const all = savedGames();
+  const active = all.filter((g) => !g.archived);
+  const archived = all.filter((g) => g.archived);
+  $("homeGamesWrap").hidden = !all.length;
+  const urgent = (g) => ["mine", "rematch"].includes(summaries.get(g.id)?.status);
+  active.sort((a, b) => (urgent(b) - urgent(a)) || ((summaries.get(b.id)?.last ?? b.t) - (summaries.get(a.id)?.last ?? a.t)));
+  const waiting = active.filter(urgent).length;
+  $("waitingBadge").hidden = !waiting;
+  $("waitingBadge").textContent = `${waiting} waiting on you`;
+  $("homeGames").replaceChildren(...active.map((g) => gameRow(g, false)));
+  $("showArchived").hidden = !archived.length;
+  $("showArchived").textContent = `${$("archivedGames").hidden ? "Show" : "Hide"} archived (${archived.length})`;
+  $("archivedGames").replaceChildren(...archived.map((g) => gameRow(g, true)));
+}
+
+function gameRow(g, archived) {
+  const sum = summaries.get(g.id);
+  const li = document.createElement("li");
+  li.className = "game-row" + (["mine", "rematch"].includes(sum?.status) ? " mine" : "");
+  const a = document.createElement("a");
+  a.href = `?g=${g.id}`;
+  const title = document.createElement("span");
+  title.className = "g-title";
+  const opp = sum?.opp || g.opp;
+  title.textContent = opp ? `vs ${opp}` : "Invite sent";
+  const sub = document.createElement("span");
+  sub.className = "g-sub";
+  sub.textContent = sum ? `${STATUS_LABEL[sum.status]} · ${sum.size}³` : (g.closed ? "Ended" : homeAuth?.signedIn ? "…" : " ");
+  a.append(title, sub);
+  const score = document.createElement("span");
+  score.className = "g-score";
+  if (sum && sum.status !== "waiting") score.textContent = `${sum.mine}–${sum.theirs}`;
+  const actions = document.createElement("span");
+  actions.className = "g-actions";
+  const iconBtn = (label, path, onClick) => {
+    const b = document.createElement("button");
+    b.className = "icon-btn"; b.type = "button"; b.setAttribute("aria-label", label); b.title = label;
+    b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    b.addEventListener("click", onClick);
+    return b;
+  };
+  if (archived) {
+    if (!g.closed) actions.append(iconBtn("Restore", "M4 12a8 8 0 1 0 3-6.2M4 4v4h4", () => { rememberGame(g.id, { archived: false, t: g.t }); renderGames(); }));
+    actions.append(iconBtn("Remove", "M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12", () => { setSavedGames(savedGames().filter((x) => x.id !== g.id)); renderGames(); }));
+  } else {
+    actions.append(iconBtn("Archive", "M4 6h16v4H4zM6 10v9h12v-9M10 14h4", () => { rememberGame(g.id, { archived: true, t: g.t }); renderGames(); }));
+    if (homeAuth?.signedIn) {
+      actions.append(iconBtn(sum?.status === "waiting" ? "Cancel invite" : "End game", "M6 6l12 12M18 6L6 18", () => {
+        if (li.querySelector(".g-confirm")) return;
+        const c = document.createElement("div");
+        c.className = "g-confirm";
+        const q = document.createElement("span");
+        q.className = "muted small";
+        q.textContent = sum?.status === "waiting" ? "Cancel the invite?" : "End it for both of you?";
+        const yes = document.createElement("button");
+        yes.className = "btn small danger"; yes.type = "button"; yes.textContent = sum?.status === "waiting" ? "Cancel invite" : "End game";
+        const no = document.createElement("button");
+        no.className = "btn small"; no.type = "button"; no.textContent = "Keep";
+        no.addEventListener("click", () => c.remove());
+        yes.addEventListener("click", async () => {
+          yes.disabled = true;
+          try {
+            const { db } = await cloudSetup(() => {});
+            await saveEvent(db, g.id, { kind: "close", author: homeAuth.me, authorName: myName() || "Player" });
+            rememberGame(g.id, { closed: true, t: g.t });
+            summaries.set(g.id, { ...(sum || { size: 4, mine: 0, theirs: 0 }), status: "ended" });
+          } catch (err) { console.warn(err); yes.disabled = false; q.textContent = "Couldn’t reach iCloud — try again."; return; }
+          renderGames();
+        });
+        c.append(q, yes, no);
+        li.append(c);
+        no.focus({ preventScroll: true });
+      }));
+    }
+  }
+  li.append(a, score, actions);
+  return li;
+}
+
+async function refreshGames() {
+  if (!homeAuth?.signedIn) return;
+  const { db } = await cloudSetup(() => {});
+  const me = homeAuth.me;
+  await Promise.all(savedGames().filter((g) => !g.archived).map(async (g) => {
+    try {
+      const s = fold(await queryGame(db, g.id));
+      const role = roleOf(s, me);
+      if (!role) return;
+      const opp = other(role);
+      let status;
+      if (s.closedBy) status = "ended";
+      else if (!s.players.O) status = "waiting";
+      else if (s.winner) status = s.ready[opp] && !s.ready[role] ? "rematch" : "over";
+      else status = s.turn === role ? "mine" : "theirs";
+      summaries.set(g.id, { status, size: s.size, mine: s.score[role], theirs: s.score[opp], opp: s.players[opp]?.name || "", last: 0 });
+      if (s.closedBy) rememberGame(g.id, { closed: true, t: g.t, opp: s.players[opp]?.name || g.opp });
+    } catch (err) { console.warn(err); }
+  }));
+  renderGames();
+}
+
+function bootHome() {
+  $("home").hidden = false;
+  renderHomeChrome();
+  showcase();
+  controls.autoRotate = !reduceMotion;
+  controls.enabled = false;
+  // Small and high: the cube floats in the band above the title.
+  const frame = () => {
+    controls.maxDistance = 100;
+    camera.position.copy(CAM_DIR).multiplyScalar((prefs.size / 4) * (innerWidth / innerHeight < 0.8 ? 1.55 : 2.1));
+    camera.setViewOffset(innerWidth, innerHeight, 0, innerHeight * 0.3, innerWidth, innerHeight);
+  };
+  frame();
+  addEventListener("resize", frame);
+  homeReframe = frame;
+  // The cube sits behind the page; let it fade away as the settings scroll over it.
+  $("home").addEventListener("scroll", () => {
+    canvas.style.opacity = String(Math.max(0, 1 - $("home").scrollTop / 220));
+  }, { passive: true });
+
+  $("homeName").value = myName();
+  $("homeName").addEventListener("input", (e) => store.set("ttc.name", e.target.value.trim().slice(0, 24)));
+  $("homeName2").value = store.get("ttc.name2") || "";
+  $("homeName2").addEventListener("input", (e) => store.set("ttc.name2", e.target.value.trim().slice(0, 24)));
+  const paint2 = () => {
+    for (const input of $("homeSwatches2").querySelectorAll("input")) {
+      input.checked = input.value === prefs.color2;
+      input.disabled = input.value === prefs.color;
+      input.closest(".swatch").style.opacity = input.disabled ? 0.3 : "";
+    }
+  };
+  swatchPicker($("homeSwatches"), "homeColor", prefs.color, (c) => { store.set("ttc.color", c); renderHomeChrome(); showcase(); paint2(); });
+  swatchPicker($("homeSwatches2"), "homeColor2", prefs.color2, (c) => store.set("ttc.color2", c));
+  paint2();
+  segPicker($("homeSize"), "homeSizePick", SIZES.map((n) => [n, `${n}×${n}×${n}`]), prefs.size, (n) => { store.set("ttc.size", n); renderHomeChrome(); showcase(); });
+  const homeToggle = (id, on, set) => {
+    setToggle(id, on);
+    $(id).addEventListener("click", () => { const v = $(id).getAttribute("aria-pressed") !== "true"; setToggle(id, v); set(v); });
+  };
+  homeToggle("homeSound", sound.on, (v) => { sound.on = v; store.set("ttc.sound", v ? "1" : "0"); if (v) { sound.unlock(); sound.tick(); } });
+  homeToggle("homeThreats", showThreats, (v) => { showThreats = v; store.set("ttc.threats", v ? "1" : "0"); });
+
+  $("playFriend").addEventListener("click", () => {
+    location.href = `?g=${newGameId()}&host=${prefs.size}`;
+  });
+  $("showArchived").addEventListener("click", () => { $("archivedGames").hidden = !$("archivedGames").hidden; renderGames(); });
+
+  renderGames();
+  // Live status needs the player's Apple sign-in (if they've signed in here before, it's remembered).
+  if (savedGames().length) {
+    $("homeSignin").append($("signin"));
+    cloudSetup((auth) => {
+      homeAuth = auth;
+      $("homeSignin").hidden = auth.signedIn || !!auth.authError;
+      $("signin").hidden = auth.signedIn || !!auth.authError;
+      renderGames();
+      refreshGames();
+    }).catch((err) => console.warn(err));
+    setInterval(() => { if (!document.hidden) refreshGames(); }, 20000);
+  }
+}
 
 /* ───────────────────────────── boot ───────────────────────────── */
 
-function askDemoSetup() {
-  return new Promise((resolve) => {
-    const seg = $("sizeSeg");
-    const savedSize = Number(store.get("ttc.demoSize")) || 4;
-    for (const n of SIZES) {
-      const label = document.createElement("label");
-      label.className = "seg-opt";
-      const input = document.createElement("input");
-      input.type = "radio"; input.name = "size"; input.value = n; input.checked = n === savedSize;
-      const span = document.createElement("span");
-      span.textContent = `${n}×${n}×${n}`;
-      label.append(input, span);
-      seg.append(label);
-    }
-    const cx = store.get("ttc.demoX") || "coral", co = store.get("ttc.demoO") || "teal";
-    swatchPicker($("demoSwatchesX"), "demoX", cx);
-    swatchPicker($("demoSwatchesO"), "demoO", co);
-    const dlg = $("demoDialog");
-    dlg.addEventListener("close", () => {
-      const size = Number(seg.querySelector("input:checked")?.value) || 4;
-      const colorX = pickedIn($("demoSwatchesX")) || "coral";
-      const colorO = pickedIn($("demoSwatchesO")) || "teal";
-      store.set("ttc.demoSize", size); store.set("ttc.demoX", colorX); store.set("ttc.demoO", colorO);
-      resolve({ size, colorX, colorO });
-    }, { once: true });
-    dlg.showModal();
-  });
-}
-
 async function boot() {
-  buildBoard(4);
+  buildBoard(PLAY ? prefs.size : SIZES.includes(HOST_SIZE) ? HOST_SIZE : 4);
   requestAnimationFrame(loop);
-  if (!GAME_ID && !DEMO) {
-    $("landing").hidden = false;
-    $("legalLanding").hidden = false;
-    controls.autoRotate = !reduceMotion;
-    // Decorative position on the landing cube.
-    const deco = [0, 21, 42, 63, 5, 26, 47, 12].map((c, i) => ({ recordName: "d" + i, kind: "move", author: i % 2 ? "o" : "x", round: 0, cell: c, ts: i + 10 }));
-    const s = fold([{ recordName: "a", kind: "join", author: "x", ts: 1, cell: 4 }, { recordName: "b", kind: "join", author: "o", ts: 2 }, ...deco]);
-    setColors(s.colors);
-    syncBoard(s);
-    return;
-  }
+  for (const id of ["getApp", "get-app-home"]) $(id).addEventListener("click", (e) => e.preventDefault());
+  if (!GAME_ID && !PLAY) { bootHome(); return; }
+
   $("hud").hidden = false;
   $("openApp").href = `tictaccube://g/${GAME_ID}`;
-  $("openApp").hidden = DEMO;
-  if (DEMO) {
-    const setup = await askDemoSetup();
-    backend = demoBackend(setup);
+  setLevelUI();
+  if (PLAY) {
+    backend = localBackend(PLAY);
+    backend.onSay = (e) => toast(e);
     backend.start(ingest);
     window.__ttc = { get state() { return state; }, place: (c) => { setPreview(c, myRole()); return commitMove(); } };
     return;
@@ -1042,10 +1373,14 @@ async function boot() {
   render();
   try {
     backend = await cloudBackend(() => { render(); maybeAskToJoin(); });
-    backend.start(ingest, (err) => { console.warn(err); showStatusError("Having trouble reaching iCloud — retrying…"); });
+    backend.start(ingest, (err) => {
+      console.warn(err);
+      if (loaded) showStatusError("Having trouble reaching iCloud — retrying…");
+      else { connError = "Couldn’t reach iCloud. Retrying… You can still play the computer from Home."; render(); }
+    });
   } catch (err) {
     console.warn(err);
-    statusError = `${err.message} Try the offline demo at ?demo=1.`;
+    statusError = `${err.message} You can still play the computer from Home.`;
     loaded = true;
     render();
   }

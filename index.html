@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#070b1f">
   <title>Tic Tac Cube</title>
-  <meta name="description" content="3-D tic-tac-toe you play with a friend by sharing a link.">
+  <meta name="description" content="3-D tic-tac-toe. Play the computer, a friend on the same device, or send a link. Free in your browser.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -22,17 +22,59 @@
 <body>
   <canvas id="scene" aria-label="3-D game board. Drag to spin, tap a slot to place a piece."></canvas>
 
-  <!-- Landing (no ?g) -->
-  <section id="landing" class="landing" hidden>
-    <div class="landing-card">
-      <div class="logo" aria-hidden="true"><span class="dot x"></span><span class="dot o"></span></div>
-      <h1>Tic Tac Cube</h1>
-      <p>Tic-tac-toe, but in three dimensions. Get a full row — across, down, through, or corner to corner — on a 3×3×3, 4×4×4 or 5×5×5 cube.</p>
-      <p class="muted">Games start from the iPhone app: a friend sends you a link, you open it here and play. No account needed to watch; sign in with your Apple ID to make moves.</p>
-      <div class="landing-actions">
-        <a class="btn primary" href="?demo=1">Try it on this device</a>
-        <a class="btn ghost" href="#" id="get-app-landing">Get the iPhone app</a>
+  <!-- Home (no ?g / ?play) -->
+  <section id="home" class="home" hidden>
+    <div class="home-inner">
+      <header class="home-head">
+        <h1>Tic Tac Cube</h1>
+        <p class="muted" id="homeTag">Four in a row, in any direction.</p>
+      </header>
+
+      <div class="card">
+        <label class="field">
+          <span class="field-label">Your name</span>
+          <input id="homeName" maxlength="24" autocomplete="nickname" placeholder="Your name">
+        </label>
+        <fieldset class="swatches" id="homeSwatches"><legend>Your colour</legend></fieldset>
+        <fieldset class="seg" id="homeSize"><legend>Cube</legend></fieldset>
+        <p class="size-note muted small" id="sizeNote"></p>
       </div>
+
+      <div class="home-actions">
+        <a class="btn primary big" id="playAI" href="?play=ai">Play the computer</a>
+        <a class="btn big" id="playLocal" href="?play=local">Two players, this device</a>
+        <button class="btn big" id="playFriend" type="button">Start a game with a friend</button>
+        <p class="muted small center" id="friendNote">Online games need a free Apple Account. Your friend can play here or in the iPhone app.</p>
+      </div>
+
+      <section class="card" id="homeGamesWrap" hidden>
+        <div class="card-head">
+          <h2>Your games</h2>
+          <span class="badge" id="waitingBadge" hidden></span>
+        </div>
+        <ul class="games" id="homeGames"></ul>
+        <div class="home-signin" id="homeSignin" hidden>
+          <span class="muted small">Sign in to see whose move it is.</span>
+        </div>
+        <button class="linkish small" id="showArchived" type="button" hidden></button>
+        <ul class="games archived" id="archivedGames" hidden></ul>
+      </section>
+
+      <details class="card more">
+        <summary>Second player &amp; settings</summary>
+        <label class="field">
+          <span class="field-label">Second player’s name (this device)</span>
+          <input id="homeName2" maxlength="24" placeholder="Player 2">
+        </label>
+        <fieldset class="swatches" id="homeSwatches2"><legend>Their colour</legend></fieldset>
+        <div class="home-toggles">
+          <button class="toggle" id="homeSound" aria-pressed="true" type="button">Sound</button>
+          <button class="toggle" id="homeThreats" aria-pressed="false" type="button">Show threats</button>
+        </div>
+      </details>
+
+      <p class="home-links"><a href="#" id="get-app-home">Get the iPhone app</a></p>
+      <p class="legal center">© 2026 FRANCESCO BERTOCCI, LLC</p>
     </div>
   </section>
 
@@ -60,10 +102,20 @@
     <footer class="bottom">
       <p class="status" id="status" aria-live="polite">Loading game…</p>
 
+      <div class="share" id="sharePanel" hidden>
+        <span class="share-label small muted">Send this link to your friend</span>
+        <div class="share-row">
+          <input id="shareLink" readonly aria-label="Game link">
+          <button class="btn small" id="copyLink" type="button">Copy</button>
+          <button class="btn small primary" id="shareLinkBtn" type="button" hidden>Share…</button>
+        </div>
+      </div>
+
       <div class="action-row">
         <button class="btn primary" id="placeBtn" hidden>Place piece</button>
         <button class="btn primary" id="againBtn" hidden>Play again</button>
         <button class="btn" id="resultBtn" hidden>See result</button>
+        <a class="btn" id="homeBtn" href="./" hidden>Back to home</a>
         <span class="resign" id="resignWrap" hidden>
           <button class="btn ghost" id="resignBtn">Resign</button>
           <span class="resign-confirm" id="resignConfirm" hidden>
@@ -107,12 +159,18 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
             <span>Sound</span>
           </button>
+          <label class="level" id="levelWrap" hidden><span>Computer</span>
+            <select id="levelSelect" aria-label="Computer level">
+              <option value="relaxed">Relaxed</option><option value="clever">Clever</option><option value="ruthless">Ruthless</option>
+            </select>
+          </label>
           <button class="toggle" id="threatToggle" aria-pressed="false" type="button">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
             <span>Threats</span>
           </button>
         </span>
         <span class="links">
+          <a id="homeLink" href="./">← Home</a>
           <a id="openApp" href="#">Open in app</a>
           <a id="getApp" href="#">Get the iPhone app</a>
         </span>
@@ -120,8 +178,6 @@
       <p class="legal">© 2026 FRANCESCO BERTOCCI, LLC</p>
     </footer>
   </section>
-
-  <footer class="legal-landing" id="legalLanding" hidden>© 2026 FRANCESCO BERTOCCI, LLC</footer>
 
   <!-- Name dialog -->
   <dialog id="nameDialog">
@@ -131,18 +187,6 @@
       <input id="nameInput" maxlength="24" required autocomplete="nickname" placeholder="Your name">
       <fieldset class="swatches" id="joinSwatches"><legend>Your colour</legend></fieldset>
       <button class="btn primary" value="ok">Join game</button>
-    </form>
-  </dialog>
-
-  <!-- Demo setup -->
-  <dialog id="demoDialog">
-    <form method="dialog" id="demoForm">
-      <h2>Pass-and-play demo</h2>
-      <p class="muted">Two players, one device. Pick a cube and your colours.</p>
-      <fieldset class="seg" id="sizeSeg"><legend>Cube</legend></fieldset>
-      <fieldset class="swatches" id="demoSwatchesX"><legend>Player 1</legend></fieldset>
-      <fieldset class="swatches" id="demoSwatchesO"><legend>Player 2</legend></fieldset>
-      <button class="btn primary" value="ok">Start</button>
     </form>
   </dialog>
 
@@ -158,6 +202,7 @@
         <div><span class="rs-num" id="rsO">0</span><span class="rs-name" id="rsNameO">O</span></div>
       </div>
       <ul class="result-next" id="resultNext"></ul>
+      <fieldset class="seg level-seg" id="resultLevel" hidden><legend>Computer</legend></fieldset>
       <div class="result-actions">
         <button class="btn primary" id="resultAgain">Ask for a rematch</button>
         <div class="result-secondary">
