@@ -380,7 +380,17 @@ canvas.addEventListener("pointerup", (e) => {
   if (moved < 8 && quick) ui.onTapCell(pick(e.clientX, e.clientY));
 });
 
-$("spread").addEventListener("input", (e) => { spread = +e.target.value; });
+$("spread").addEventListener("input", (e) => {
+  spread = +e.target.value;
+  $("spreadBtn").setAttribute("aria-pressed", String(spread > 0.55));
+});
+// Toolbar shortcut: open/close the layers in one tap (fine control lives in the ⋯ menu).
+$("spreadBtn").addEventListener("click", () => {
+  const r = $("spread");
+  r.value = spread > 0.55 ? "0.25" : "0.9";
+  r.dispatchEvent(new Event("input"));
+  sound.tick?.();
+});
 
 /* ───────────────────────────── confetti ───────────────────────────── */
 
@@ -985,6 +995,8 @@ function render() {
   $("chat").hidden = closed || inReplay || !(role && bothJoined());
   $("signin").hidden = !!backend?.signedIn || offline() || !backend || !!backend?.authError;
   $("chat").hidden ||= offline();
+  $("chatBtn").hidden = $("chat").hidden;          // chat lives behind the toolbar icon
+  if ($("chatBtn").hidden) $("chatPop").hidePopover?.();
   $("homeBtn").hidden = !(closed || (state.winner && !resultOpen && !inReplay));
   $("levelWrap").hidden = !vsComputer();
   const host = role === "X" && !bothJoined() && !closed && !offline() && loaded;
@@ -1096,9 +1108,9 @@ addEventListener("keydown", (e) => {
 $("resignBtn").addEventListener("click", () => setResignConfirm(true));
 $("endBtn").addEventListener("click", () => setEndConfirm(true));
 $("endNo").addEventListener("click", () => { setEndConfirm(false); $("endBtn").focus({ preventScroll: true }); });
-$("endYes").addEventListener("click", () => { setEndConfirm(false); setPreview(-1); send({ kind: "close" }); });
+$("endYes").addEventListener("click", () => { setEndConfirm(false); $("menuPop").hidePopover?.(); setPreview(-1); send({ kind: "close" }); });
 $("resignNo").addEventListener("click", () => { setResignConfirm(false); $("resignBtn").focus({ preventScroll: true }); });
-$("resignYes").addEventListener("click", () => { setResignConfirm(false); setPreview(-1); send({ kind: "resign" }); });
+$("resignYes").addEventListener("click", () => { setResignConfirm(false); $("menuPop").hidePopover?.(); setPreview(-1); send({ kind: "resign" }); });
 $("replayPlay").addEventListener("click", () => (replay?.timer ? pauseReplay() : playReplay()));
 $("replaySlider").addEventListener("input", (e) => { pauseReplay(); setReplayK(+e.target.value); });
 $("replayDone").addEventListener("click", () => { stopReplay(); openResult(); });
@@ -1108,6 +1120,7 @@ setToggle("soundToggle", sound.on);
 setToggle("threatToggle", showThreats);
 $("soundToggle").addEventListener("click", () => {
   sound.on = !sound.on; store.set("ttc.sound", sound.on ? "1" : "0"); setToggle("soundToggle", sound.on);
+  $("soundToggle").setAttribute("aria-label", sound.on ? "Sound on" : "Sound off");
   if ($("homeSound")) setToggle("homeSound", sound.on);
   if (sound.on) { sound.unlock(); sound.tick(); }
 });
@@ -1119,7 +1132,7 @@ $("threatToggle").addEventListener("click", () => {
 for (const p of PRESETS) {
   const b = document.createElement("button");
   b.className = "chip"; b.type = "button"; b.textContent = p;
-  b.addEventListener("click", () => send({ kind: "say", text: p }));
+  b.addEventListener("click", () => { send({ kind: "say", text: p }); $("chatPop").hidePopover?.(); });
   $("chips").append(b);
 }
 
