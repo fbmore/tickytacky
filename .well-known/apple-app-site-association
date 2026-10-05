@@ -1,0 +1,12 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["5C5ZJ7G7SE.com.fbmore.TicTacCube"],
+        "components": [
+          { "/": "/*", "?": { "g": "?*" }, "comment": "Game links" }
+        ]
+      }
+    ]
+  }
+}

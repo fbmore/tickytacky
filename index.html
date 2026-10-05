@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#070b1f">
+  <title>Tic Tac Cube</title>
+  <meta name="description" content="3-D tic-tac-toe you play with a friend by sharing a link.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="scene" aria-label="3-D game board. Drag to spin, tap a slot to place a piece."></canvas>
+
+  <!-- Landing (no ?g) -->
+  <section id="landing" class="landing" hidden>
+    <div class="landing-card">
+      <div class="logo" aria-hidden="true"><span class="dot x"></span><span class="dot o"></span></div>
+      <h1>Tic Tac Cube</h1>
+      <p>Tic-tac-toe, but in three dimensions. Four in a row — across, down, through, or corner to corner on a 4×4×4 cube.</p>
+      <p class="muted">Games start from the iPhone app: a friend sends you a link, you open it here and play. No account needed to watch; sign in with your Apple ID to make moves.</p>
+      <div class="landing-actions">
+        <a class="btn primary" href="?demo=1">Try it on this device</a>
+        <a class="btn ghost" href="#" id="get-app-landing">Get the iPhone app</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Game HUD -->
+  <section id="hud" class="hud" hidden>
+    <header class="topbar">
+      <div class="player" id="pX" data-mark="X">
+        <span class="chip-dot x" aria-hidden="true"></span>
+        <div class="pinfo"><span class="pname" id="nameX">Waiting…</span><span class="prole">X</span></div>
+        <span class="score" id="scoreX">0</span>
+      </div>
+      <div class="center-pill">
+        <span class="round" id="round">Round 1</span>
+        <span class="turn" id="turn">—</span>
+      </div>
+      <div class="player right" id="pO" data-mark="O">
+        <span class="score" id="scoreO">0</span>
+        <div class="pinfo"><span class="pname" id="nameO">Waiting…</span><span class="prole">O</span></div>
+        <span class="chip-dot o" aria-hidden="true"></span>
+      </div>
+    </header>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+
+    <footer class="bottom">
+      <p class="status" id="status" aria-live="polite">Loading game…</p>
+
+      <div class="action-row">
+        <button class="btn primary" id="placeBtn" hidden>Place piece</button>
+        <button class="btn primary" id="againBtn" hidden>Play again</button>
+        <div id="signin" class="signin" hidden>
+          <div id="apple-sign-in-button"></div>
+          <span class="muted small">Sign in with Apple to play</span>
+        </div>
+        <div id="apple-sign-out-button" hidden></div>
+      </div>
+
+      <div class="chat" id="chat" hidden>
+        <div class="chips" id="chips"></div>
+        <form class="say" id="sayForm">
+          <input id="sayInput" maxlength="80" placeholder="Say something…" autocomplete="off" aria-label="Message">
+          <button class="btn small" type="submit">Send</button>
+        </form>
+      </div>
+
+      <div class="meta-row">
+        <label class="spread"><span>Spread</span><input type="range" id="spread" min="0" max="1" step="0.01" value="0.25" aria-label="Spread layers apart"></label>
+        <span class="links">
+          <a id="openApp" href="#">Open in app</a>
+          <a id="getApp" href="#">Get the iPhone app</a>
+        </span>
+      </div>
+      <p class="legal">© 2026 FRANCESCO BERTOCCI, LLC</p>
+    </footer>
+  </section>
+
+  <footer class="legal-landing" id="legalLanding" hidden>© 2026 FRANCESCO BERTOCCI, LLC</footer>
+
+  <!-- Name dialog -->
+  <dialog id="nameDialog">
+    <form method="dialog" id="nameForm">
+      <h2>What should we call you?</h2>
+      <p class="muted">Your opponent will see this name.</p>
+      <input id="nameInput" maxlength="24" required autocomplete="nickname" placeholder="Your name">
+      <button class="btn primary" value="ok">Join game</button>
+    </form>
+  </dialog>
+
+  <canvas id="confetti" aria-hidden="true"></canvas>
+
+  <script src="https://cdn.apple-cloudkit.com/ck/2/cloudkit.js" async></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
