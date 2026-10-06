@@ -61,6 +61,8 @@ const sound = {
     if (bonus) notes.push([this.note(14), 0.38], [this.note(16), 0.46]);
     this.bell(notes, { duration: 1.2 + length * 0.08, decay: 4.5, gain: 0.2 });
   },
+  /** Extra word: a light two-note chime, quieter than an answer. */
+  extra() { this.bell([[this.note(4), 0], [this.note(7), 0.07]], { duration: 0.7, decay: 9, gain: 0.15 }); },
   wrong() { this.bell([[196, 0], [147, 0.07]], { duration: 0.35, decay: 16, gain: 0.22 }); },
   already() { this.bell([[this.note(7), 0], [this.note(7), 0.09]], { duration: 0.3, decay: 20, gain: 0.12 }); },
   reveal() { this.bell(Array.from({ length: 9 }, (_, k) => [this.note(5 + k), k * 0.07]), { duration: 1.4, decay: 5, gain: 0.13 }); },
@@ -543,6 +545,7 @@ function bootPlay(book, kind) {
       else if (cue === "undo") sound.undo(a);
       else if (cue === "word") { sound.word(a, b); haptic(18); }
       else if (cue === "wrong") { sound.wrong(); haptic([12, 40, 12]); }
+      else if (cue === "extra") { sound.extra(); haptic(10); }
       else if (cue === "already") sound.already();
       else if (cue === "reveal") setTimeout(() => sound.reveal(), 450); // follows the word chord
     },
@@ -612,9 +615,10 @@ function bootPlay(book, kind) {
   function submit() {
     if (!game.path.length) return;
     const f = game.submit();
-    if (f.kind === "found" || f.kind === "phaseUnlocked") flash(f.path);
+    if (f.kind === "found" || f.kind === "phaseUnlocked" || f.kind === "extra") flash(f.path);
     const text = {
       found: () => (f.bonus ? `+${f.points} · through every layer!` : f.points >= 6 ? `+${f.points} · Brilliant!` : `+${f.points}`),
+      extra: () => `${f.word.toUpperCase()} · extra word`,
       already: () => `Already found ${f.word.toUpperCase()}`,
       notAWord: () => `${f.word.toUpperCase()} isn’t in the list`,
       tooShort: () => `Words need ${puzzle.minLength}+ letters`,
@@ -693,6 +697,22 @@ function bootPlay(book, kind) {
       sec.append(h, chips);
       return sec;
     }));
+    // Real words that aren't on the list: kept, but they don't count toward the total.
+    if (game.extraCount) {
+      const sec = document.createElement("section");
+      sec.className = "wc-len";
+      const h = document.createElement("h3");
+      h.textContent = `Extra words · ${game.extraCount} (not counted)`;
+      const chips = document.createElement("div");
+      chips.className = "wc-chips";
+      for (const w of [...game.progress.extra].sort()) {
+        const c = document.createElement("span");
+        c.className = "wc-chip extra"; c.textContent = w.toUpperCase();
+        chips.append(c);
+      }
+      sec.append(h, chips);
+      $("wordsList").append(sec);
+    }
     openSheet($("wordsSheet"));
   });
 
