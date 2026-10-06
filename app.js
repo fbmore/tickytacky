@@ -1309,6 +1309,10 @@ function editMe() {
 for (const r of ["X", "O"]) $("name" + r).addEventListener("click", () => { if (myRole() === r) editMe(); });
 
 function segPicker(fieldset, name, options, selected, onChange) {
+  // The glass track is its own element: styling the fieldset itself puts the legend inside its padding/background on WebKit.
+  const track = document.createElement("div");
+  track.className = "seg-track";
+  fieldset.append(track);
   for (const [value, text] of options) {
     const label = document.createElement("label");
     label.className = "seg-opt";
@@ -1318,7 +1322,7 @@ function segPicker(fieldset, name, options, selected, onChange) {
     const span = document.createElement("span");
     span.textContent = text;
     label.append(input, span);
-    fieldset.append(label);
+    track.append(label);
   }
 }
 
