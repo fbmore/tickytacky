@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#070b1f">
+  <title>Word Cube · Tic Tac Cube</title>
+  <meta name="description" content="Trace words through a 3-D cube of letters. A new cube every day, the same for everyone. Free in your browser.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="words.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="scene" aria-label="3-D letter cube. Drag to spin, tap letters to spell a word."></canvas>
+
+  <!-- Hub: today's cube, practice boards, how to play -->
+  <section id="hub" class="home" hidden>
+    <div class="home-inner">
+      <header class="home-head">
+        <h1>Word Cube</h1>
+        <p class="muted">Trace words through the cube, one neighbouring letter at a time: up, down, left, right, forward or back.</p>
+      </header>
+
+      <a class="card wc-daily" id="dailyCard" href="#">
+        <span class="wc-daily-top">
+          <span class="wc-daily-title">Today’s cube</span>
+          <span class="muted small" id="dailyDate"></span>
+        </span>
+        <span class="muted" id="dailyLine">Same letters for everyone today. No timer.</span>
+        <span class="wc-pill" id="dailyGo">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>
+          <span id="dailyGoLabel">Play</span>
+        </span>
+      </a>
+
+      <section class="wc-section">
+        <h2 class="wc-section-title">Practice</h2>
+        <ul class="wc-practice" id="practice"></ul>
+      </section>
+
+      <section class="wc-section">
+        <h2 class="wc-section-title">How to play</h2>
+        <ul class="wc-rules" id="rules">
+          <li><span aria-hidden="true">☝︎</span>Tap a letter, then a neighbouring one. The rings show where you can go next.</li>
+          <li><span aria-hidden="true">↶</span>Tap the last letter again to take it back.</li>
+          <li><span aria-hidden="true">⬡</span>Letters connect through faces only: no diagonals. Each letter once per word.</li>
+          <li><span aria-hidden="true">✦</span>Find words to reveal the rest of the cube, in three waves.</li>
+          <li><span aria-hidden="true">★</span>Longer words score more. A word through every layer earns +3.</li>
+          <li class="wc-keys"><span aria-hidden="true">⌨︎</span>On a keyboard: Enter submits, Backspace takes a letter back, Esc clears.</li>
+        </ul>
+      </section>
+
+      <p class="home-links"><a href="./">← Tic Tac Cube</a></p>
+      <p class="legal center">© 2026 FRANCESCO BERTOCCI, LLC</p>
+    </div>
+  </section>
+
+  <!-- Playing one board -->
+  <section id="play" class="wc-play" hidden>
+    <header class="wc-top">
+      <p class="wc-title" id="boardTitle"></p>
+      <div class="wc-head">
+        <div class="wc-row">
+          <span class="wc-rank" id="rank">Getting Started</span>
+          <span class="wc-score"><b id="score">0</b> pts</span>
+        </div>
+        <div class="wc-bar" id="rankBar" role="img"><span class="wc-fill" id="rankFill"></span></div>
+        <div class="wc-row">
+          <button class="wc-count" id="wordsBtn" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5A1.5 1.5 0 0 1 6.5 4H18v14H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H18v-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            <span id="wordCount">0 of 0 words</span>
+          </button>
+          <span class="wc-phase" id="phase" role="img">
+            <span class="muted small" id="phaseHint"></span>
+            <span class="wc-dot"></span><span class="wc-dot"></span><span class="wc-dot"></span>
+          </span>
+        </div>
+      </div>
+      <div class="wc-toast-wrap" aria-live="polite"><span class="wc-toast" id="toast" hidden></span></div>
+    </header>
+
+    <footer class="wc-bottom">
+      <div class="wc-letters" id="letters"><span class="muted" id="lettersHint">Tap a letter, then its neighbours</span></div>
+      <div class="wc-actions">
+        <button class="btn wc-clear" id="clearBtn" type="button" aria-label="Clear" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="btn wc-enter" id="enterBtn" type="button" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6v5a3 3 0 0 1-3 3H6m0 0 4-4m-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Enter
+        </button>
+      </div>
+      <nav class="toolbar" aria-label="Word Cube controls">
+        <a class="tool" href="words.html" aria-label="All boards" title="All boards">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <button class="tool" id="spreadBtn" type="button" aria-pressed="false" aria-label="Spread the layers" title="Spread the layers">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5 12 4l8 3.5-8 3.5zM4 12l8 3.5 8-3.5M4 16.5 12 20l8-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="tool" id="soundToggle" aria-pressed="true" type="button" aria-label="Sound" title="Sound">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <button class="tool" id="shareBtn" type="button" aria-label="Share your progress" title="Share your progress">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M8 8l4-4 4 4M6 12v6.5A1.5 1.5 0 0 0 7.5 20h9a1.5 1.5 0 0 0 1.5-1.5V12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </nav>
+    </footer>
+  </section>
+
+  <!-- Found words: bottom sheet on phones, centred on wider screens -->
+  <div class="invite-backdrop" id="wordsSheet" hidden>
+    <div class="invite-card wc-words" role="dialog" aria-modal="true" aria-labelledby="wordsTitle">
+      <span class="invite-grip" aria-hidden="true"></span>
+      <div class="wc-words-head">
+        <h2 id="wordsTitle">Your words</h2>
+        <span class="muted" id="wordsTally">0 / 0</span>
+      </div>
+      <div class="wc-words-list" id="wordsList"></div>
+      <button class="btn ghost invite-done" id="wordsDone" type="button">Done</button>
+    </div>
+  </div>
+
+  <!-- Progress / share card -->
+  <div class="result-backdrop" id="done" hidden>
+    <div class="result-card wc-done" role="dialog" aria-modal="true" aria-label="Your progress">
+      <canvas class="wc-share" id="shareCanvas" width="1200" height="1200"></canvas>
+      <p class="muted small" id="nextRank"></p>
+      <div class="result-actions">
+        <button class="btn primary" id="shareGo" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18"><path d="M12 4v11M8 8l4-4 4 4M6 12v6.5A1.5 1.5 0 0 0 7.5 20h9a1.5 1.5 0 0 0 1.5-1.5V12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Share
+        </button>
+        <button class="btn ghost" id="doneClose" type="button">Keep playing</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="words.js"></script>
+</body>
+</html>
