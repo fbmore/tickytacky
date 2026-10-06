@@ -70,6 +70,28 @@ for (const kind of [{ daily: 0 }, { daily: 200 }, { size: 3, index: 0 }, { size:
   assert.equal(game.submit().kind, "tooShort");
 }
 
+// Extra words: real words that aren't answers are accepted, kept, and never scored.
+{
+  const p = book.puzzle({ size: 3, index: 0 });
+  assert.ok(p.extras.size > 20);
+  const extra = [...p.extras].find((w) => trace(w, p, 0));
+  assert.ok(extra, "some extra word is traceable in phase 1");
+  assert.equal(p.words[extra], undefined);
+  let saved = null;
+  const game = new WordGame(p, { found: [], bonus: [], bestPath: [], bestWord: "" }, { onSave: (s) => (saved = s) }); // old saves have no `extra`
+  for (const c of trace(extra, p, 0)) game.tap(c);
+  assert.equal(game.submit().kind, "extra");
+  assert.deepEqual(saved.extra, [extra]);
+  assert.equal(game.score, 0);
+  assert.equal(game.foundCount, 0);
+  for (const c of trace(extra, p, 0)) game.tap(c);
+  assert.equal(game.submit().kind, "already");
+  assert.equal(game.extraCount, 1);
+  // ALE is on some 3×3×3 boards now.
+  const withAle = Array.from({ length: book.practiceCount(3) }, (_, i) => book.puzzle({ size: 3, index: i })).filter((q) => q.extras.has("ale"));
+  assert.ok(withAle.length > 0);
+}
+
 // Ranks + daily calendar.
 assert.equal(RANKS.at(-1).name, "Genius");
 assert.equal(book.today(new Date(2026, 9, 6, 23, 59)), 0);
