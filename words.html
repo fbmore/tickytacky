@@ -44,6 +44,26 @@
       </a>
 
       <section class="wc-section">
+        <h2 class="wc-section-title">Play a friend</h2>
+        <div class="card wc-duo">
+          <p class="muted small">Take turns on the same cube, ten words each. Every word belongs to whoever finds it first.</p>
+          <fieldset class="seg" id="duoSize"><legend>Cube</legend></fieldset>
+          <button class="btn primary big" id="duoFriend" type="button">Start a game with a friend</button>
+          <a class="btn big" id="duoLocal" href="?w=local">Two players, this device</a>
+        </div>
+        <div class="card" id="duoGamesWrap" hidden>
+          <div class="card-head">
+            <h2>Your games</h2>
+            <span class="badge" id="duoBadge" hidden></span>
+          </div>
+          <ul class="games" id="duoGames"></ul>
+          <div class="home-signin" id="duoSignin" hidden><span class="muted small">Sign in to see whose turn it is.</span></div>
+          <button class="linkish small" id="duoShowArchived" type="button" hidden></button>
+          <ul class="games archived" id="duoArchived" hidden></ul>
+        </div>
+      </section>
+
+      <section class="wc-section">
         <h2 class="wc-section-title">Practice</h2>
         <ul class="wc-practice" id="practice"></ul>
       </section>
@@ -71,7 +91,20 @@
     <header class="wc-top">
       <p class="wc-title" id="boardTitle"></p>
       <div class="wc-head">
-        <div class="wc-row">
+        <div class="wc-duel" id="duel" hidden>
+          <button class="wc-player" id="pX" data-mark="X" type="button">
+            <span class="chip-dot" data-mark="X" aria-hidden="true"></span>
+            <span class="pname" id="nameX">Waiting…</span>
+            <b class="wc-pscore" id="scoreX">0</b>
+          </button>
+          <span class="wc-turns" id="turns">Turn 1 of 10</span>
+          <button class="wc-player right" id="pO" data-mark="O" type="button">
+            <b class="wc-pscore" id="scoreO">0</b>
+            <span class="pname" id="nameO">Waiting…</span>
+            <span class="chip-dot" data-mark="O" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="wc-row" id="soloRank">
           <span class="wc-rank" id="rank">Getting Started</span>
           <span class="wc-score"><b id="score">0</b> pts</span>
         </div>
@@ -88,9 +121,21 @@
         </div>
       </div>
       <div class="wc-toast-wrap" aria-live="polite"><span class="wc-toast" id="toast" hidden></span></div>
+      <div id="toasts" class="toasts wc-chat-toasts" aria-live="polite"></div>
     </header>
 
     <footer class="wc-bottom">
+      <p class="status wc-status" id="status" aria-live="polite" hidden></p>
+      <div class="action-row wc-duo-actions" id="duoActions" hidden>
+        <button class="btn primary" id="inviteBtn" type="button" hidden>Invite a friend</button>
+        <button class="btn primary" id="againBtn" type="button" hidden>Ask for a rematch</button>
+        <button class="btn" id="resultBtn" type="button" hidden>See result</button>
+        <div id="signin" class="signin" hidden>
+          <div id="apple-sign-in-button"></div>
+          <span class="muted small">Sign in with Apple to play</span>
+        </div>
+        <div id="apple-sign-out-button" hidden></div>
+      </div>
       <div class="wc-letters" id="letters"><span class="muted" id="lettersHint">Tap a letter, then its neighbours</span></div>
       <div class="wc-actions">
         <button class="btn wc-clear" id="clearBtn" type="button" aria-label="Clear" disabled>
@@ -100,6 +145,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6v5a3 3 0 0 1-3 3H6m0 0 4-4m-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Enter
         </button>
+        <button class="btn wc-pass" id="passBtn" type="button" hidden>Pass</button>
       </div>
       <nav class="toolbar" aria-label="Word Cube controls">
         <a class="tool" href="words.html" aria-label="All boards" title="All boards">
@@ -111,12 +157,101 @@
         <button class="tool" id="soundToggle" aria-pressed="true" type="button" aria-label="Sound" title="Sound">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         </button>
+        <button class="tool" id="chatBtn" type="button" popovertarget="chatPop" aria-label="Quick messages" title="Quick messages" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14v9H10l-4 3.5v-3.5H5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="tool" id="menuBtn" type="button" popovertarget="menuPop" aria-label="More" title="More" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="18" cy="12" r="1.6" fill="currentColor"/></svg>
+        </button>
         <button class="tool" id="shareBtn" type="button" aria-label="Share your progress" title="Share your progress">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M8 8l4-4 4 4M6 12v6.5A1.5 1.5 0 0 0 7.5 20h9a1.5 1.5 0 0 0 1.5-1.5V12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </nav>
+
+      <div class="pop chat-pop" id="chatPop" popover>
+        <div class="chat" id="chat"><div class="chips" id="chips"></div></div>
+      </div>
+      <div class="pop menu-pop" id="menuPop" popover>
+        <span class="menu-row resign" id="resignWrap" hidden>
+          <button class="menu-item danger-text" id="resignBtn" type="button">Resign this game</button>
+          <span class="resign-confirm" id="resignConfirm" hidden>
+            <span class="muted small">Give this game away?</span>
+            <button class="btn small danger" id="resignYes" type="button">Resign</button>
+            <button class="btn small" id="resignNo" type="button">Keep playing</button>
+          </span>
+        </span>
+        <span class="menu-row resign" id="endWrap" hidden>
+          <button class="menu-item danger-text" id="endBtn" type="button">End game</button>
+          <span class="resign-confirm" id="endConfirm" hidden>
+            <span class="muted small" id="endQ">End it for both of you?</span>
+            <button class="btn small danger" id="endYes" type="button">End game</button>
+            <button class="btn small" id="endNo" type="button">Keep playing</button>
+          </span>
+        </span>
+        <span class="menu-sep" aria-hidden="true"></span>
+        <a class="menu-item" href="words.html">All Word Cube games</a>
+      </div>
     </footer>
   </section>
+
+  <!-- Name dialog (joining a game, or renaming yourself) -->
+  <dialog id="nameDialog">
+    <form method="dialog" id="nameForm">
+      <h2 id="nameTitle">Join the game</h2>
+      <p class="muted">Your opponent will see this name and colour.</p>
+      <input id="nameInput" maxlength="24" required autocomplete="nickname" placeholder="Your name">
+      <fieldset class="swatches" id="joinSwatches"><legend>Your colour</legend></fieldset>
+      <div class="dialog-actions">
+        <button class="btn ghost" value="cancel" id="nameCancel" formnovalidate hidden>Cancel</button>
+        <button class="btn primary" value="ok" id="nameOk">Join game</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Invite card -->
+  <div class="invite-backdrop" id="invite" hidden>
+    <div class="invite-card" role="dialog" aria-modal="true" aria-labelledby="inviteTitle">
+      <span class="invite-grip" aria-hidden="true"></span>
+      <h2 id="inviteTitle">Invite a friend</h2>
+      <p class="muted" id="inviteLead">Your game is ready. Send this link to the person you want to play.</p>
+      <button class="invite-link" id="inviteLink" type="button" aria-label="Copy game link">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span id="inviteUrl"></span>
+      </button>
+      <div class="invite-actions">
+        <button class="btn primary" id="inviteCopy" type="button">Copy link</button>
+        <button class="btn" id="inviteShare" type="button" hidden>Share…</button>
+      </div>
+      <ol class="invite-steps">
+        <li><b>Send the link</b><span>Messages, WhatsApp, email — anything works.</span></li>
+        <li><b>Take your first turn</b><span>You don’t have to wait: find a word now. They’ll see it replayed when they open the link.</span></li>
+        <li><b>Ten words each, any time</b><span>No timer. Keep this tab around — its title shows “● Your turn” when it’s your go.</span></li>
+      </ol>
+      <button class="btn ghost invite-done" id="inviteDone" type="button">Done</button>
+    </div>
+  </div>
+
+  <!-- End-of-game card -->
+  <div class="result-backdrop" id="result" hidden>
+    <div class="result-card" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+      <div class="result-orb" id="resultOrb" aria-hidden="true"></div>
+      <h2 id="resultTitle">You win!</h2>
+      <p class="result-how" id="resultHow"></p>
+      <div class="result-score">
+        <div><span class="rs-num" id="rsX">0</span><span class="rs-name" id="rsNameX">X</span></div>
+        <span class="rs-dash" aria-hidden="true">–</span>
+        <div><span class="rs-num" id="rsO">0</span><span class="rs-name" id="rsNameO">O</span></div>
+      </div>
+      <ul class="result-next" id="resultNext"></ul>
+      <div class="result-actions">
+        <button class="btn primary" id="resultAgain" type="button">Ask for a rematch</button>
+        <div class="result-secondary">
+          <button class="btn" id="resultWords" type="button">See the words</button>
+          <button class="btn ghost" id="resultClose" type="button">Look at the cube</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Found words: bottom sheet on phones, centred on wider screens -->
   <div class="invite-backdrop" id="wordsSheet" hidden>
@@ -146,6 +281,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.apple-cloudkit.com/ck/2/cloudkit.js" async></script>
   <script type="module" src="words.js"></script>
 </body>
 </html>
