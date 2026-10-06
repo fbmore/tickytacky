@@ -13,8 +13,9 @@ const DIRS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1
 
 /** One board. kind: { daily: day } or { size, index }. */
 export class Puzzle {
-  constructor({ kind, n, tiles, words, minLength, phaseBoxes }) {
-    Object.assign(this, { kind, n, tiles, words, minLength, phaseBoxes });
+  /** words: answer → phase (counted). extras: other real words on the board (accepted, not counted). */
+  constructor({ kind, n, tiles, words, minLength, phaseBoxes, extras = new Set() }) {
+    Object.assign(this, { kind, n, tiles, words, minLength, phaseBoxes, extras });
     this.cells = n * n * n;
   }
   idx(x, y, z) { return x + this.n * y + this.n * this.n * z; }
@@ -49,7 +50,7 @@ export class Puzzle {
   get wordCount() { return Object.keys(this.words).length; }
 }
 
-export function parsePuzzle(raw, n, kind, minLength, phaseBoxes) {
+export function parsePuzzle(raw, n, kind, minLength, phaseBoxes, extras = "") {
   const bar = raw.indexOf("|");
   if (bar < 0 || bar !== n * n * n) return null;
   const tiles = [...raw.slice(0, bar)].map((ch) => (ch === "." ? null : ch === "q" ? "qu" : ch));
@@ -58,7 +59,7 @@ export function parsePuzzle(raw, n, kind, minLength, phaseBoxes) {
     const [w, ph] = entry.split(":");
     if (w && ph !== undefined && !Number.isNaN(+ph)) words[w] = +ph;
   }
-  return new Puzzle({ kind, n, tiles, words, minLength, phaseBoxes });
+  return new Puzzle({ kind, n, tiles, words, minLength, phaseBoxes, extras: new Set(extras ? extras.split(",") : []) });
 }
 
 // ───────────── the puzzle book (puzzles.json) ─────────────
@@ -80,30 +81,32 @@ export function makeBook(file) {
     dateOfDay(day) { const s = startDate(file); return new Date(s.getFullYear(), s.getMonth(), s.getDate() + day); },
     practiceCount(size) { return file.practice[String(size)]?.length ?? 0; },
     puzzle(kind) {
-      let n, raw;
+      let n, raw, extras;
       if ("daily" in kind) {
         if (!file.daily.length) return null;
-        n = 4; raw = file.daily[kind.daily % file.daily.length]; // loops after a year until the book is extended
+        const i = kind.daily % file.daily.length; // loops after a year until the book is extended
+        n = 4; raw = file.daily[i]; extras = file.extra?.daily?.[i];
       } else {
         const list = file.practice[String(kind.size)];
         if (!list?.length) return null;
-        n = kind.size; raw = list[kind.index % list.length];
+        const i = kind.index % list.length;
+        n = kind.size; raw = list[i]; extras = file.extra?.practice?.[String(kind.size)]?.[i];
       }
-      return parsePuzzle(raw, n, kind, file.minLen[String(n)] ?? 4, file.phases[String(n)] ?? []);
+      return parsePuzzle(raw, n, kind, file.minLen[String(n)] ?? 4, file.phases[String(n)] ?? [], extras);
     },
   };
 }
 
 /** Storage key for a board's progress — same names as iOS, under the web's "ttc." prefix. */
 export const progressKey = (kind) => ("daily" in kind ? `ttc.wc-d${kind.daily}` : `ttc.wc-p${kind.size}-${kind.index}`);
-export const emptyProgress = () => ({ found: [], bonus: [], bestPath: [], bestWord: "" });
+export const emptyProgress = () => ({ found: [], bonus: [], bestPath: [], bestWord: "", extra: [] });
 
 // ───────────── one game ─────────────
 
 /**
- * Feedback kinds: { kind: "found", word, points, bonus } · { kind: "already", word } ·
+ * Feedback kinds: { kind: "found", word, points, bonus } · { kind: "extra", word } · { kind: "already", word } ·
  * { kind: "notAWord", word } · { kind: "tooShort" } · { kind: "phaseUnlocked", phase }.
- * Cues (for sound): letter(step) · undo(step) · word(length, bonus) · wrong · already · reveal.
+ * Cues (for sound): letter(step) · undo(step) · word(length, bonus) · extra · wrong · already · reveal.
  */
 export class WordGame {
   constructor(puzzle, progress = emptyProgress(), { onSave = () => {}, onCue = () => {} } = {}) {
@@ -119,6 +122,8 @@ export class WordGame {
   get foundCount() { return this.progress.found.length; }
   get totalWords() { return this.puzzle.wordCount; }
   get currentWord() { return this.puzzle.wordFor(this.path); }
+  /** Real words found that aren't on the answer list: shown, but not scored or counted. */
+  get extraCount() { return this.progress.extra.length; }
 
   get score() {
     return this.progress.found.reduce((s, w) => s + this.puzzle.points(w), 0) + this.progress.bonus.length * LAYER_BONUS;
@@ -197,7 +202,14 @@ export class WordGame {
     const word = this.currentWord, path = this.path;
     this.path = [];
     if (word.length < this.puzzle.minLength) { this.onCue("wrong"); return this.#say({ kind: "tooShort" }); }
-    if (!(word in this.puzzle.words)) { this.onCue("wrong"); return this.#say({ kind: "notAWord", word }); }
+    if (!(word in this.puzzle.words)) {
+      if (!this.puzzle.extras.has(word)) { this.onCue("wrong"); return this.#say({ kind: "notAWord", word }); }
+      if (this.progress.extra.includes(word)) { this.onCue("already"); return this.#say({ kind: "already", word }); }
+      this.progress = { ...this.progress, extra: [...this.progress.extra, word] };
+      this.onSave(this.progress);
+      this.onCue("extra");
+      return this.#say({ kind: "extra", word, path });
+    }
     if (this.foundSet.has(word)) { this.onCue("already"); return this.#say({ kind: "already", word }); }
     const phaseBefore = this.unlockedPhase;
     const bonus = this.puzzle.touchesEveryLayer(path);
