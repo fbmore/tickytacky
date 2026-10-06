@@ -263,8 +263,7 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(-
 .swatch:has(input:checked)::before { box-shadow: 0 0 0 2px #121a3e, 0 0 0 4px var(--sw); scale: 1.06; }
 .swatch:has(input:focus-visible)::before { outline: 2px solid #9fb2ec; outline-offset: 5px; }
 .swatch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
-.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 16px; background: var(--glass); }
-.seg legend { margin-bottom: 8px; }
+.seg-track { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 16px; background: var(--glass); }
 .seg-opt { position: relative; }
 .seg-opt input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
 .seg-opt span {
@@ -442,6 +441,7 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(-
 @media (prefers-reduced-motion: reduce) { .pop { transition: none; } }
 
 /* Pieces style picker inside the ⋯ menu */
-.seg-compact { display: flex; gap: 2px; margin: 0; padding: 2px; border: 0; border-radius: 12px; background: var(--glass); }
+.seg-compact { margin: 0; }
+.seg-compact .seg-track { display: flex; gap: 2px; padding: 2px; border-radius: 12px; }
 .seg-compact .seg-opt span { min-height: 40px; padding: 0 12px; border-radius: 10px; font-size: 13px; }
 #homePieces { margin-top: 4px; }
