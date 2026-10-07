@@ -17,6 +17,8 @@ assert.ok(boardIndex("zzzzzzzzzz", 3, 60) < 60);
 assert.equal(boardIndex("a", 0, 60), 97 % 60); // h = 97 for "a" (Swift must match)
 assert.deepEqual(decodeWord(encodeWord("planet", [1, 2, 3])), { word: "planet", path: [1, 2, 3] });
 assert.equal(decodeWord("nope"), null);
+assert.equal(decodeWord("ab|1,,2"), null);
+assert.equal(decodeWord("ab|+1,2"), null);
 
 // Host joins with a size and may play the first turn before the guest arrives.
 const events = [ev("ann", "join", { text: "Ann", cell: 3, color: "gold" })];
