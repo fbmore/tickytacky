@@ -865,7 +865,7 @@ function updateTitle() {
   const role = myRole();
   const waiting = !!(backend && !backend.local && role && !state.closedBy &&
     (ui.canPlace() || (state.winner && state.ready[other(role)] && !state.ready[role])));
-  document.title = (document.hidden && waiting ? "● Your move · " : "") + "Tic Tac Cube";
+  document.title = (document.hidden && waiting ? "● Your move · " : "") + "Tic Tac Cube · TickyTacky";
 }
 document.addEventListener("visibilitychange", updateTitle);
 
