@@ -1224,7 +1224,7 @@ async function boot() {
   $("getApp").addEventListener("click", (e) => e.preventDefault());
 
   $("hud").hidden = false;
-  $("openApp").href = `tictaccube://g/${GAME_ID}`;
+  $("openApp").href = `tickytacky://g/${GAME_ID}`;
   setLevelUI();
   if (PLAY) {
     backend = localBackend(PLAY);
