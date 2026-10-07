@@ -11,7 +11,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#070b1f">
   <title>TickyTacky: three games, one glass cube</title>
-  <meta name="description" content="3-D tic-tac-toe, a daily word hunt and a gravity-bending colour pop, all on one glass cube. Play the computer, a friend beside you, or send a link. Free while in beta, no ads.">
+  <meta name="description" content="A daily word hunt through a 3-D cube, 3-D tic-tac-toe and a gravity-bending colour pop, all on one glass cube. Play the computer, a friend beside you, or send a link. Free while in beta, no ads.">
   <meta property="og:title" content="TickyTacky">
   <meta property="og:description" content="Three games, one glass cube. Free while in beta, no ads, no tracking.">
   <link rel="stylesheet" href="site.css">
@@ -36,8 +36,8 @@
   <main>
     <section class="wrap hero">
       <p class="kicker">Three games · One glass cube</p>
-      <h1>Spin it. Trace it. <em>Pop it.</em></h1>
-      <p class="lede">Tic-tac-toe in three dimensions, a word hunt that runs through the layers, and a colour-popping puzzle where gravity follows your hand. Play the computer, a friend beside you, or anyone with a link.</p>
+      <h1>Trace it. Spin it. <em>Pop it.</em></h1>
+      <p class="lede">A daily word hunt that runs through the layers, tic-tac-toe in three dimensions, and a colour-popping puzzle where gravity follows your hand. Play the computer, a friend beside you, or anyone with a link.</p>
       <div class="cta">
         <a class="btn primary" href="play.html">Play now in your browser</a>
         <!-- TESTFLIGHT: replace href with the public TestFlight link; later the App Store link -->
@@ -45,25 +45,7 @@
       </div>
     </section>
 
-    <section class="wrap demo" aria-labelledby="ttt-h">
-      <div class="stage"><canvas id="demoTtt" aria-label="Two computer players playing 4×4×4 tic-tac-toe"></canvas></div>
-      <div>
-        <p class="eyebrow" style="color: var(--accent)">Tic Tac Cube</p>
-        <h2 id="ttt-h">Four in a row, <em>in any direction</em>.</h2>
-        <p class="copy">Across a layer, straight down, or corner to corner through the whole cube. Spin it, spread the layers apart, and see the line before they do.</p>
-        <ul>
-          <li>3×3×3, 4×4×4 or 5×5×5</li>
-          <li>A computer opponent from Relaxed to Ruthless</li>
-          <li>Replay any round, move by move</li>
-        </ul>
-        <div class="actions">
-          <a class="btn primary" href="play.html?page=ttt&amp;start=solo">Play the computer</a>
-          <a class="btn" href="play.html?page=ttt&amp;start=invite">Invite a friend</a>
-        </div>
-      </div>
-    </section>
-
-    <section class="wrap demo flip" aria-labelledby="words-h">
+    <section class="wrap demo" aria-labelledby="words-h">
       <div class="stage"><canvas id="demoWords" aria-label="Words being traced through a cube of letters"></canvas><div class="chips" id="wordChips" aria-hidden="true"></div></div>
       <div>
         <p class="eyebrow" style="color: var(--gold)">Word Cube</p>
@@ -77,6 +59,24 @@
         <div class="actions">
           <a class="btn primary" href="play.html?page=words&amp;start=daily">Today’s challenge</a>
           <a class="btn" href="play.html?page=words&amp;start=practice">Practice</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap demo flip" aria-labelledby="ttt-h">
+      <div class="stage"><canvas id="demoTtt" aria-label="Two computer players playing 4×4×4 tic-tac-toe"></canvas></div>
+      <div>
+        <p class="eyebrow" style="color: var(--accent)">Tic Tac Cube</p>
+        <h2 id="ttt-h">Four in a row, <em>in any direction</em>.</h2>
+        <p class="copy">Across a layer, straight down, or corner to corner through the whole cube. Spin it, spread the layers apart, and see the line before they do.</p>
+        <ul>
+          <li>3×3×3, 4×4×4 or 5×5×5</li>
+          <li>A computer opponent from Relaxed to Ruthless</li>
+          <li>Replay any round, move by move</li>
+        </ul>
+        <div class="actions">
+          <a class="btn primary" href="play.html?page=ttt&amp;start=solo">Play the computer</a>
+          <a class="btn" href="play.html?page=ttt&amp;start=invite">Invite a friend</a>
         </div>
       </div>
     </section>
