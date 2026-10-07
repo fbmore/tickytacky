@@ -40,7 +40,8 @@
           <h1>Word Cube</h1>
           <p class="hc-tag">Trace words through the cube, letter to touching letter.</p>
           <fieldset class="seg hc-size" data-size-for="words"><legend class="sr">Cube size</legend></fieldset>
-          <div class="hc-row"><a class="btn primary big hc-solo" id="wPractice" href="words.html">Practice</a><a class="btn big hc-daily" id="wDaily" href="words.html?b=daily"><span>Today’s challenge</span><small id="wDailyDetail">4×4×4 · daily</small></a></div>
+          <!-- The daily cube leads: same board for everyone, a reason to come back tomorrow. -->
+          <div class="hc-row"><a class="btn primary big hc-solo hc-daily" id="wDaily" href="words.html?b=daily"><span>Today’s challenge</span><small id="wDailyDetail">4×4×4 · daily</small></a><a class="btn big hc-tint" id="wPractice" href="words.html">Practice</a></div>
           <div class="hc-row"><button class="btn big" id="wInvite" type="button">Invite</button><a class="btn big" id="wLocal" href="words.html?w=local">Same device</a></div>
           <p class="hc-links"><a href="words.html">All boards &amp; how to play →</a></p>
         </div>

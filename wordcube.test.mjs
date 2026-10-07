@@ -3,9 +3,13 @@ import fs from "node:fs";
 import { makeBook, WordGame, trace, emptyProgress, progressKey, RANKS } from "./wordcube.js";
 
 const book = makeBook(JSON.parse(fs.readFileSync(new URL("./puzzles.json", import.meta.url))));
-// The web copy must match the one bundled with the iOS app.
-assert.equal(fs.readFileSync(new URL("./puzzles.json", import.meta.url), "utf8"),
-  fs.readFileSync(new URL("../ios/TicTacCube/Support/puzzles.json", import.meta.url), "utf8"), "web/puzzles.json out of sync with iOS");
+// The web copy must match the one bundled with the iOS app. Only checkable in the app repo:
+// the published site repo holds just web/, with no iOS folder next to it.
+const iosBook = new URL("../ios/TicTacCube/Support/puzzles.json", import.meta.url);
+if (fs.existsSync(iosBook)) {
+  assert.equal(fs.readFileSync(new URL("./puzzles.json", import.meta.url), "utf8"),
+    fs.readFileSync(iosBook, "utf8"), "web/puzzles.json out of sync with iOS");
+}
 
 // Boards load and every answer is traceable.
 for (const kind of [{ daily: 0 }, { daily: 200 }, { size: 3, index: 0 }, { size: 5, index: 7 }]) {

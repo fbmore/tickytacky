@@ -478,8 +478,10 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(-
 .hc-row .btn.big { width: 100%; text-decoration: none; }
 .btn.hc-solo { background: var(--me); color: #0b0f24; }
 .btn.hc-solo:hover { background: color-mix(in srgb, var(--me) 88%, #fff); }
-.hc-daily { flex-direction: column; gap: 1px; line-height: 1.15; background: color-mix(in srgb, var(--me) 38%, rgb(255 255 255 / 0.06)); }
-.hc-daily:hover { background: color-mix(in srgb, var(--me) 48%, rgb(255 255 255 / 0.08)); }
+.hc-daily { flex-direction: column; gap: 1px; line-height: 1.15; }
+/* The secondary button of a pair: a wash of your colour (.hc-solo, when present, stays solid). */
+.hc-daily, .hc-tint { background: color-mix(in srgb, var(--me) 38%, rgb(255 255 255 / 0.06)); }
+.hc-daily:hover, .hc-tint:hover { background: color-mix(in srgb, var(--me) 48%, rgb(255 255 255 / 0.08)); }
 .hc-daily span { white-space: nowrap; }
 .hc-daily small { font-size: 12px; font-weight: 500; opacity: 0.8; font-variant-numeric: tabular-nums; }
 .hc-links { margin: 2px 0 0; display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 20px; font-size: 14px; }
