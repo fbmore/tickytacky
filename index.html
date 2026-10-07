@@ -11,9 +11,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#070b1f">
   <title>Tic Tac Cube: three games, one glass cube</title>
-  <meta name="description" content="3-D tic-tac-toe, a daily word hunt and a gravity-bending colour pop, all on one glass cube. Play the computer, a friend beside you, or send a link. Free, no ads.">
+  <meta name="description" content="3-D tic-tac-toe, a daily word hunt and a gravity-bending colour pop, all on one glass cube. Play the computer, a friend beside you, or send a link. Free while in beta, no ads.">
   <meta property="og:title" content="Tic Tac Cube">
-  <meta property="og:description" content="Three games, one glass cube. Free, no ads, no tracking.">
+  <meta property="og:description" content="Three games, one glass cube. Free while in beta, no ads, no tracking.">
   <link rel="stylesheet" href="site.css">
   <script type="importmap">
   { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
@@ -40,8 +40,8 @@
       <p class="lede">Tic-tac-toe in three dimensions, a word hunt that runs through the layers, and a colour-popping puzzle where gravity follows your hand. Play the computer, a friend beside you, or anyone with a link.</p>
       <div class="cta">
         <a class="btn primary" href="play.html">Play now in your browser</a>
-        <!-- swap for TestFlight/App Store link -->
-        <span class="pill-soon">Coming soon to the App Store</span>
+        <!-- TESTFLIGHT: replace href with the public TestFlight link; later the App Store link -->
+        <a class="pill-soon" id="testflight-hero" href="support.html#beta">iPhone beta on TestFlight</a>
       </div>
     </section>
 
@@ -130,17 +130,21 @@
         </article>
         <article class="card">
           <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12 12 20 4 12V4h8z"/><circle cx="8.5" cy="8.5" r="1.3"/></svg></div>
-          <h3>Free, no catch</h3>
-          <p>Every game, every mode, every size. Nothing to unlock.</p>
+          <h3>Free while in beta</h3>
+          <p>Every game, every mode, every size. No ads, nothing to unlock.</p>
         </article>
       </div>
     </section>
 
     <section class="wrap pricing" aria-labelledby="price-h">
       <p class="kicker" id="price-h">Pricing</p>
-      <p class="price">Free.</p>
-      <p>No ads, no subscriptions, no in-app purchases.</p>
-      <a class="btn primary" href="play.html">Play now</a>
+      <p class="price">Free while in <em>Beta</em></p>
+      <p>Try the iPhone app early on TestFlight, or play right here in your browser. No ads, no tracking.</p>
+      <div class="cta">
+        <!-- TESTFLIGHT: replace href with the public TestFlight link (https://testflight.apple.com/join/…) -->
+        <a class="btn primary" id="testflight" href="support.html#beta">Join the beta on TestFlight</a>
+        <a class="btn" href="play.html">Play in your browser</a>
+      </div>
     </section>
   </main>
 
