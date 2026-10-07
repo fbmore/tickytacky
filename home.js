@@ -94,6 +94,21 @@ export function initHome({ sound, setSoundOn, onPieces, pieceOptions, pieceStyle
   $("wInvite").addEventListener("click", () => { location.href = `words.html?w=${newGameId()}&host=${sizeOf("ttc.wsize")}`; });
   $("pInvite").addEventListener("click", () => { location.href = `pop.html?p=${newGameId()}&host=${sizeOf("ttc.psize")}`; });
 
+  // ?page=<game>&start=<mode> (from the marketing site): press that page's button for the visitor.
+  const START = {
+    ttt: { solo: "tttAI", local: "tttLocal", invite: "tttInvite" },
+    words: { practice: "wPractice", daily: "wDaily", invite: "wInvite", local: "wLocal" },
+    pop: { moves: "pMoves", daily: "pDaily", zen: "pZen", invite: "pInvite", local: "pLocal" },
+  };
+  const startQ = new URLSearchParams(location.search);
+  const startId = START[startQ.get("page")]?.[startQ.get("start")];
+  if (startId) {
+    const el = $(startId);
+    if (el instanceof HTMLAnchorElement) { location.replace(el.href); return; }
+    el?.click();
+    return;
+  }
+
   /* ── carousel ── */
   const track = $("hcTrack");
   const dots = [...document.querySelectorAll(".hc-dots button")];

@@ -2,298 +2,171 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <script>
+    // Game and invite links (…/?g=…, ?page=…, ?demo=1 …) belong to the player: send them on, untouched.
+    if (location.search && location.search !== "?") location.replace("play.html" + location.search + location.hash);
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#070b1f">
-  <title>Tic Tac Cube</title>
-  <meta name="description" content="3-D tic-tac-toe. Play the computer, a friend on the same device, or send a link. Free in your browser.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <title>Tic Tac Cube: three games, one glass cube</title>
+  <meta name="description" content="3-D tic-tac-toe, a daily word hunt and a gravity-bending colour pop, all on one glass cube. Play the computer, a friend beside you, or send a link. Free, no ads.">
+  <meta property="og:title" content="Tic Tac Cube">
+  <meta property="og:description" content="Three games, one glass cube. Free, no ads, no tracking.">
+  <link rel="stylesheet" href="site.css">
   <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
-    }
-  }
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+                 "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
   </script>
 </head>
 <body>
-  <canvas id="scene" aria-label="3-D game board. Drag to spin, tap a slot to place a piece."></canvas>
+  <header class="wrap nav">
+    <a class="brand" href="./"><span class="dot" aria-hidden="true"></span>Tic Tac Cube</a>
+    <nav aria-label="Site">
+      <ul>
+        <li><a class="link" href="play.html">Play</a></li>
+        <li><a class="link" href="support.html">Support</a></li>
+        <li class="wide"><a class="link" href="privacy.html">Privacy</a></li>
+        <li class="wide"><a class="link" href="terms.html">Terms</a></li>
+      </ul>
+    </nav>
+  </header>
 
-  <!-- Home: one game per page. Swipe (or arrow keys / dots) between Tic Tac Cube, Word Cube, Cube Pop. -->
-  <section id="home" class="hc" hidden>
-    <div class="hc-top">
-      <button class="tool" id="hcSound" type="button" aria-pressed="true" aria-label="Sound" title="Sound">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-      </button>
-      <button class="tool" id="hcSettingsBtn" type="button" aria-label="Settings" title="Settings">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9.2a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.4-2.3 1a7.4 7.4 0 0 0-2.6-1.5L14 2.6h-4l-.5 2.5a7.4 7.4 0 0 0-2.6 1.5l-2.3-1-2 3.4 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.4 2.3-1a7.4 7.4 0 0 0 2.6 1.5l.5 2.5h4l.5-2.5a7.4 7.4 0 0 0 2.6-1.5l2.3 1 2-3.4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-      </button>
-    </div>
+  <main>
+    <section class="wrap hero">
+      <p class="kicker">Three games · One glass cube</p>
+      <h1>Spin it. Trace it. <em>Pop it.</em></h1>
+      <p class="lede">Tic-tac-toe in three dimensions, a word hunt that runs through the layers, and a colour-popping puzzle where gravity follows your hand. Play the computer, a friend beside you, or anyone with a link.</p>
+      <div class="cta">
+        <a class="btn primary" href="play.html">Play now in your browser</a>
+        <!-- swap for TestFlight/App Store link -->
+        <span class="pill-soon">Coming soon to the App Store</span>
+      </div>
+    </section>
 
-    <div class="hc-track" id="hcTrack" tabindex="-1">
-      <article class="hc-page" data-game="ttt" aria-roledescription="slide" aria-label="Tic Tac Cube">
-        <div class="hc-hero"><canvas class="hc-canvas" aria-hidden="true"></canvas></div>
-        <div class="hc-panel">
-          <h1>Tic Tac Cube</h1>
-          <p class="hc-tag" id="tttTag">Four in a row, in any direction.</p>
-          <fieldset class="seg hc-size" data-size-for="ttt"><legend class="sr">Cube size</legend></fieldset>
-          <div class="hc-row"><a class="btn primary big hc-solo" id="tttAI" href="?play=ai">Play the computer</a></div>
-          <div class="hc-row"><button class="btn big" id="tttInvite" type="button">Invite</button><a class="btn big" id="tttLocal" href="?play=local">Same device</a></div>
+    <section class="wrap demo" aria-labelledby="ttt-h">
+      <div class="stage"><canvas id="demoTtt" aria-label="Two computer players playing 4×4×4 tic-tac-toe"></canvas></div>
+      <div>
+        <p class="eyebrow" style="color: var(--accent)">Tic Tac Cube</p>
+        <h2 id="ttt-h">Four in a row, <em>in any direction</em>.</h2>
+        <p class="copy">Across a layer, straight down, or corner to corner through the whole cube. Spin it, spread the layers apart, and see the line before they do.</p>
+        <ul>
+          <li>3×3×3, 4×4×4 or 5×5×5</li>
+          <li>A computer opponent from Relaxed to Ruthless</li>
+          <li>Replay any round, move by move</li>
+        </ul>
+        <div class="actions">
+          <a class="btn primary" href="play.html?page=ttt&amp;start=solo">Play the computer</a>
+          <a class="btn" href="play.html?page=ttt&amp;start=invite">Invite a friend</a>
         </div>
-      </article>
+      </div>
+    </section>
 
-      <article class="hc-page" data-game="words" aria-roledescription="slide" aria-label="Word Cube">
-        <div class="hc-hero"><canvas class="hc-canvas" aria-hidden="true"></canvas></div>
-        <div class="hc-panel">
-          <h1>Word Cube</h1>
-          <p class="hc-tag">Trace words through the cube, letter to touching letter.</p>
-          <fieldset class="seg hc-size" data-size-for="words"><legend class="sr">Cube size</legend></fieldset>
-          <div class="hc-row"><a class="btn primary big hc-solo" id="wPractice" href="words.html">Practice</a><a class="btn big hc-daily" id="wDaily" href="words.html?b=daily"><span>Today’s challenge</span><small id="wDailyDetail">4×4×4 · daily</small></a></div>
-          <div class="hc-row"><button class="btn big" id="wInvite" type="button">Invite</button><a class="btn big" id="wLocal" href="words.html?w=local">Same device</a></div>
-          <p class="hc-links"><a href="words.html">All boards &amp; how to play →</a></p>
+    <section class="wrap demo flip" aria-labelledby="words-h">
+      <div class="stage"><canvas id="demoWords" aria-label="Words being traced through a cube of letters"></canvas><div class="chips" id="wordChips" aria-hidden="true"></div></div>
+      <div>
+        <p class="eyebrow" style="color: var(--gold)">Word Cube</p>
+        <h2 id="words-h">Words that run <em>through the layers</em>.</h2>
+        <p class="copy">Trace from letter to touching letter: up, down, left, right, forward or back. Find enough words and the rest of the cube reveals itself.</p>
+        <ul>
+          <li>A new cube every day, the same for everyone</li>
+          <li>Practice boards in three sizes</li>
+          <li>Climb from Getting Started to Genius</li>
+        </ul>
+        <div class="actions">
+          <a class="btn primary" href="play.html?page=words&amp;start=daily">Today’s challenge</a>
+          <a class="btn" href="play.html?page=words&amp;start=practice">Practice</a>
         </div>
-      </article>
+      </div>
+    </section>
 
-      <article class="hc-page" data-game="pop" aria-roledescription="slide" aria-label="Cube Pop">
-        <div class="hc-hero"><canvas class="hc-canvas" aria-hidden="true"></canvas></div>
-        <div class="hc-panel">
-          <h1>Cube Pop</h1>
-          <p class="hc-tag">Pop chains of one colour. Turn the cube to choose where the rest fall.</p>
-          <fieldset class="seg hc-size" data-size-for="pop"><legend class="sr">Cube size</legend></fieldset>
-          <div class="hc-row"><a class="btn primary big hc-solo" id="pMoves" href="pop.html?m=moves">30 moves</a><a class="btn big hc-daily" id="pDaily" href="pop.html?m=daily"><span>Today’s challenge</span><small id="pDailyDetail">4×4×4 · daily</small></a></div>
-          <div class="hc-row"><button class="btn big" id="pInvite" type="button">Invite</button><a class="btn big" id="pLocal" href="pop.html?p=local">Same device</a></div>
-          <p class="hc-links"><a id="pZen" href="pop.html?m=zen">Zen · endless</a><a href="pop.html">How specials work →</a></p>
+    <section class="wrap demo" aria-labelledby="pop-h">
+      <div class="stage"><canvas id="demoPop" aria-label="Chains of coloured orbs popping, the rest falling as the cube turns"></canvas></div>
+      <div>
+        <p class="eyebrow" style="color: var(--teal)">Cube Pop</p>
+        <h2 id="pop-h">Gravity <em>follows your hand</em>.</h2>
+        <p class="copy">Trace three or more touching orbs of one colour and pop them. Turn the cube to choose which way the rest fall, and set up the next chain.</p>
+        <ul>
+          <li>Long chains make bombs, beams and wild prisms</li>
+          <li>Gold orbs double your points</li>
+          <li>Today’s challenge, 30-move games and endless Zen</li>
+        </ul>
+        <div class="actions">
+          <a class="btn primary" href="play.html?page=pop&amp;start=daily">Today’s challenge</a>
+          <a class="btn" href="play.html?page=pop&amp;start=moves">30 moves</a>
         </div>
-      </article>
-    </div>
+      </div>
+    </section>
 
-    <div class="hc-foot">
-      <nav class="hc-dots" aria-label="Games">
-        <button type="button" data-page="0" aria-label="Tic Tac Cube"></button>
-        <button type="button" data-page="1" aria-label="Word Cube"></button>
-        <button type="button" data-page="2" aria-label="Cube Pop"></button>
+    <section class="wrap" aria-labelledby="feat-h">
+      <h2 class="section-title" id="feat-h">Made to be <em>touched</em>.</h2>
+      <p class="section-sub">Every spin ticks like a dial, every piece lands with a soft thump, and every word you trace plays a little melody.</p>
+      <div class="features">
+        <article class="card">
+          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg></div>
+          <h3>A real object in your hand</h3>
+          <p>Spin with momentum, pinch to spread the layers, glassy sounds and haptics you can switch off.</p>
+        </article>
+        <article class="card">
+          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></div>
+          <h3>Play with anyone</h3>
+          <p>Send a link. Friends with the iPhone app jump straight in; others play in their browser after signing in with Apple. No timers: games wait for you.</p>
+        </article>
+        <article class="card">
+          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M4 9.3h16M4 14.6h16M9.3 4v16M14.6 4v16"/></svg></div>
+          <h3>Three sizes</h3>
+          <p>A quick, chaotic 3×3×3, the classic 4×4×4, or a roomy 5×5×5 for long plans, in every game.</p>
+        </article>
+        <article class="card">
+          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="4" y="5.5" width="16" height="14" rx="3"/><path d="M8 3.5v4M16 3.5v4M4 10h16"/></svg></div>
+          <h3>Daily challenges</h3>
+          <p>A new Word Cube and a new Pop board every day, the same for everyone. Share your result without spoiling it.</p>
+        </article>
+        <article class="card">
+          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5 5 6v5.5c0 4.4 3 7.8 7 9 4-1.2 7-4.6 7-9V6z"/></svg></div>
+          <h3>Private by design</h3>
+          <p>No ads, no analytics, no tracking, no accounts. Games with friends travel through Apple’s iCloud; everything else stays with you.</p>
+        </article>
+        <article class="card">
+          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12 12 20 4 12V4h8z"/><circle cx="8.5" cy="8.5" r="1.3"/></svg></div>
+          <h3>Free, no catch</h3>
+          <p>Every game, every mode, every size. Nothing to unlock.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="wrap pricing" aria-labelledby="price-h">
+      <p class="kicker" id="price-h">Pricing</p>
+      <p class="price">Free.</p>
+      <p>No ads, no subscriptions, no in-app purchases.</p>
+      <a class="btn primary" href="play.html">Play now</a>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap row">
+      <span>© 2026 FRANCESCO BERTOCCI, LLC</span>
+      <nav aria-label="Footer">
+        <a href="support.html">Support</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+        <a href="mailto:fbmore+tictaccube@gmail.com">fbmore+tictaccube@gmail.com</a>
       </nav>
-      <button class="hc-games" id="gamesBtn" type="button" hidden>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8.5" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 19c.6-3 2.8-4.7 5.5-4.7s4.9 1.7 5.5 4.7M15.5 5.6a3 3 0 0 1 0 5.8M17.5 14.5c1.6.6 2.7 2.2 3 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        <span>Your games</span><span class="hc-count" id="gamesCount">0</span>
-        <span class="hc-turn" id="gamesTurn" hidden></span>
-      </button>
-      <p class="legal center">© 2026 FRANCESCO BERTOCCI, LLC</p>
     </div>
-  </section>
+  </footer>
 
-  <!-- Your games (all three games, from this browser) -->
-  <div class="invite-backdrop" id="gamesSheet" hidden>
-    <div class="invite-card hc-sheet" role="dialog" aria-modal="true" aria-labelledby="gamesTitle">
-      <span class="invite-grip" aria-hidden="true"></span>
-      <div class="hc-sheet-head">
-        <h2 id="gamesTitle">Your games</h2>
-        <span class="badge" id="gamesBadge" hidden></span>
-      </div>
-      <ul class="games" id="gamesList"></ul>
-      <div class="home-signin" id="gamesSignin" hidden>
-        <span class="muted small">Sign in to see whose move it is.</span>
-        <div id="apple-sign-in-button"></div>
-        <div id="apple-sign-out-button" hidden></div>
-      </div>
-      <button class="linkish small" id="gamesArchivedBtn" type="button" hidden></button>
-      <ul class="games archived" id="gamesArchived" hidden></ul>
-      <button class="btn ghost invite-done" id="gamesDone" type="button">Done</button>
-    </div>
-  </div>
-
-  <!-- Settings -->
-  <dialog id="settingsDialog" class="hc-settings">
-    <form method="dialog">
-      <h2>Settings</h2>
-      <label class="field"><span class="field-label">Your name</span><input id="homeName" maxlength="24" autocomplete="nickname" placeholder="Your name"></label>
-      <fieldset class="swatches" id="homeSwatches"><legend>Your colour</legend></fieldset>
-      <label class="field"><span class="field-label">Second player’s name (this device)</span><input id="homeName2" maxlength="24" placeholder="Player 2"></label>
-      <fieldset class="swatches" id="homeSwatches2"><legend>Their colour</legend></fieldset>
-      <fieldset class="seg" id="homePieces"><legend>Pieces</legend></fieldset>
-      <div class="home-toggles">
-        <button class="toggle" id="homeSound" aria-pressed="true" type="button">Sound</button>
-        <button class="toggle" id="homeThreats" aria-pressed="false" type="button">Show threats</button>
-      </div>
-      <p class="home-links"><a href="#" id="get-app-home">Get the iPhone app</a></p>
-      <div class="dialog-actions"><button class="btn primary" value="ok">Done</button></div>
-    </form>
-  </dialog>
-
-  <!-- Game HUD -->
-  <section id="hud" class="hud" hidden>
-    <header class="topbar">
-      <div class="player" id="pX" data-mark="X">
-        <span class="chip-dot" data-mark="X" aria-hidden="true"></span>
-        <div class="pinfo"><span class="pname" id="nameX">Waiting…</span><span class="prole">X</span></div>
-        <span class="score" id="scoreX">0</span>
-      </div>
-      <div class="center-pill">
-        <span class="round" id="round">Round 1</span>
-        <span class="turn" id="turn">—</span>
-      </div>
-      <div class="player right" id="pO" data-mark="O">
-        <span class="score" id="scoreO">0</span>
-        <div class="pinfo"><span class="pname" id="nameO">Waiting…</span><span class="prole">O</span></div>
-        <span class="chip-dot" data-mark="O" aria-hidden="true"></span>
-      </div>
-    </header>
-
-    <div id="toasts" class="toasts" aria-live="polite"></div>
-
-    <footer class="bottom">
-      <p class="status" id="status" aria-live="polite">Loading game…</p>
-
-      <div class="action-row">
-        <button class="btn primary" id="inviteBtn" type="button" hidden>Invite a friend</button>
-        <button class="btn primary" id="placeBtn" hidden>Place piece</button>
-        <button class="btn primary" id="againBtn" hidden>Play again</button>
-        <button class="btn" id="resultBtn" hidden>See result</button>
-        <a class="btn" id="homeBtn" href="./" hidden>Back to home</a>
-        <div id="signin" class="signin" hidden>
-          <div id="apple-sign-in-button"></div>
-          <span class="muted small">Sign in with Apple to play</span>
-        </div>
-        <div id="apple-sign-out-button" hidden></div>
-      </div>
-
-      <div class="replay" id="replay" hidden>
-        <button class="btn small icon" id="replayPlay" aria-label="Play replay">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>
-        </button>
-        <input type="range" id="replaySlider" min="0" max="0" step="1" value="0" aria-label="Replay position">
-        <span class="replay-count" id="replayCount">0 / 0</span>
-        <button class="btn small" id="replayDone">Done</button>
-      </div>
-
-      <!-- Quiet icon toolbar; everything else lives behind chat and ⋯ -->
-      <nav class="toolbar" aria-label="Game controls">
-        <a class="tool" id="homeLink" href="./" aria-label="Home" title="Home">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a>
-        <button class="tool" id="spreadBtn" type="button" aria-pressed="false" aria-label="Spread the layers" title="Spread the layers">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5 12 4l8 3.5-8 3.5zM4 12l8 3.5 8-3.5M4 16.5 12 20l8-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-        </button>
-        <button class="tool" id="chatBtn" type="button" popovertarget="chatPop" aria-label="Quick messages" title="Quick messages" hidden>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14v9H10l-4 3.5v-3.5H5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-        </button>
-        <button class="tool" id="soundToggle" aria-pressed="true" type="button" aria-label="Sound" title="Sound">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        </button>
-        <button class="tool" id="menuBtn" type="button" popovertarget="menuPop" aria-label="More" title="More">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="18" cy="12" r="1.6" fill="currentColor"/></svg>
-        </button>
-      </nav>
-
-      <div class="pop chat-pop" id="chatPop" popover>
-        <div class="chat" id="chat" hidden>
-          <div class="chips" id="chips"></div>
-        </div>
-      </div>
-
-      <div class="pop menu-pop" id="menuPop" popover>
-        <label class="menu-row spread"><span>Spread layers</span><input type="range" id="spread" min="0" max="1" step="0.01" value="0.25" aria-label="Spread layers apart"></label>
-        <label class="menu-row level" id="levelWrap" hidden><span>Computer</span>
-          <select id="levelSelect" aria-label="Computer level">
-            <option value="relaxed">Relaxed</option><option value="clever">Clever</option><option value="ruthless">Ruthless</option>
-          </select>
-        </label>
-        <div class="menu-row pieces"><span id="menuPiecesLabel">Pieces</span>
-          <fieldset class="seg seg-compact" id="menuPieces" aria-labelledby="menuPiecesLabel"></fieldset>
-        </div>
-        <button class="menu-row toggle" id="threatToggle" aria-pressed="false" type="button">
-          <span>Show threats</span><span class="switch" aria-hidden="true"></span>
-        </button>
-        <span class="menu-row resign" id="resignWrap" hidden>
-          <button class="menu-item danger-text" id="resignBtn">Resign this round</button>
-          <span class="resign-confirm" id="resignConfirm" hidden>
-            <span class="muted small">Give this round away?</span>
-            <button class="btn small danger" id="resignYes">Resign</button>
-            <button class="btn small" id="resignNo">Keep playing</button>
-          </span>
-        </span>
-        <span class="menu-row resign" id="endWrap" hidden>
-          <button class="menu-item danger-text" id="endBtn">End game</button>
-          <span class="resign-confirm" id="endConfirm" hidden>
-            <span class="muted small" id="endQ">End it for both of you?</span>
-            <button class="btn small danger" id="endYes">End game</button>
-            <button class="btn small" id="endNo">Keep playing</button>
-          </span>
-        </span>
-        <span class="menu-sep" aria-hidden="true"></span>
-        <a class="menu-item" id="openApp" href="#">Open in the iPhone app</a>
-        <a class="menu-item" id="getApp" href="#">Get the iPhone app</a>
-      </div>
-      <p class="legal">© 2026 FRANCESCO BERTOCCI, LLC</p>
-    </footer>
-  </section>
-
-  <!-- Name dialog -->
-  <dialog id="nameDialog">
-    <form method="dialog" id="nameForm">
-      <h2 id="nameTitle">Join the game</h2>
-      <p class="muted">Your opponent will see this name and colour.</p>
-      <input id="nameInput" maxlength="24" required autocomplete="nickname" placeholder="Your name">
-      <fieldset class="swatches" id="joinSwatches"><legend>Your colour</legend></fieldset>
-      <div class="dialog-actions">
-        <button class="btn ghost" value="cancel" id="nameCancel" formnovalidate hidden>Cancel</button>
-        <button class="btn primary" value="ok" id="nameOk">Join game</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- Invite card: link, copy, share, what happens next -->
-  <div class="invite-backdrop" id="invite" hidden>
-    <div class="invite-card" role="dialog" aria-modal="true" aria-labelledby="inviteTitle">
-      <span class="invite-grip" aria-hidden="true"></span>
-      <h2 id="inviteTitle">Invite a friend</h2>
-      <p class="muted" id="inviteLead">Your game is ready. Send this link to the person you want to play.</p>
-      <button class="invite-link" id="inviteLink" type="button" aria-label="Copy game link">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        <span id="inviteUrl"></span>
-      </button>
-      <div class="invite-actions">
-        <button class="btn primary" id="inviteCopy" type="button">Copy link</button>
-        <button class="btn" id="inviteShare" type="button" hidden>Share…</button>
-      </div>
-      <ol class="invite-steps">
-        <li><b>Send the link</b><span>Messages, WhatsApp, email — anything works.</span></li>
-        <li><b>They open it</b><span>With the iPhone app it opens right in the game. Otherwise they play here in the browser after signing in with Apple.</span></li>
-        <li><b>Take turns, any time</b><span>No rush, no timer. Keep this tab around — its title shows “● Your move” when it’s your turn.</span></li>
-      </ol>
-      <button class="btn ghost invite-done" id="inviteDone" type="button">Done</button>
-    </div>
-  </div>
-
-  <!-- End-of-round card -->
-  <div class="result-backdrop" id="result" hidden>
-    <div class="result-card" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
-      <div class="result-orb" id="resultOrb" aria-hidden="true"></div>
-      <h2 id="resultTitle">You win!</h2>
-      <p class="result-how" id="resultHow"></p>
-      <div class="result-score">
-        <div><span class="rs-num" id="rsX">0</span><span class="rs-name" id="rsNameX">X</span></div>
-        <span class="rs-dash" aria-hidden="true">–</span>
-        <div><span class="rs-num" id="rsO">0</span><span class="rs-name" id="rsNameO">O</span></div>
-      </div>
-      <ul class="result-next" id="resultNext"></ul>
-      <fieldset class="seg level-seg" id="resultLevel" hidden><legend>Computer</legend></fieldset>
-      <div class="result-actions">
-        <button class="btn primary" id="resultAgain">Ask for a rematch</button>
-        <div class="result-secondary">
-          <button class="btn" id="resultReplay">Replay</button>
-          <button class="btn ghost" id="resultClose">Look at the cube</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <canvas id="confetti" aria-hidden="true"></canvas>
-
-  <script src="https://cdn.apple-cloudkit.com/ck/2/cloudkit.js" async></script>
-  <script type="module" src="app.js"></script>
+  <script type="module">
+    import { tttDemo, wordsDemo, popDemo } from "./demo.js";
+    tttDemo(document.getElementById("demoTtt"));
+    popDemo(document.getElementById("demoPop"));
+    const chips = document.getElementById("wordChips");
+    wordsDemo(document.getElementById("demoWords"), (word, pts) => {
+      if (!word) { chips.replaceChildren(); return; }
+      const c = document.createElement("span");
+      c.className = "chip";
+      c.textContent = `${word.toUpperCase()} +${pts}`;
+      chips.append(c);
+      while (chips.children.length > 5) chips.firstElementChild.remove();
+    });
+  </script>
 </body>
 </html>
