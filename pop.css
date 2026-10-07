@@ -1,0 +1,35 @@
+/* Cube Pop — layered on style.css + words.css. */
+.pop-rules b { font-weight: 600; color: var(--ink); }
+.pop-rules li > span { font-size: 16px; }
+
+.pop-solo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pop-solo > div { display: flex; flex-direction: column; gap: 2px; }
+.pop-solo > .right { align-items: flex-end; }
+.pop-solo[hidden] { display: none; }
+.pop-big { font-size: 32px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; display: inline-block; }
+.pop-big.bump { animation: bump 700ms var(--ease); }
+.pop-big.low { color: var(--cx); }
+#best { font-variant-numeric: tabular-nums; }
+
+/* "+240" floating up after a pop */
+.pop-float { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.pop-go { gap: 8px; }
+.pop-go span { font-variant-numeric: tabular-nums; }
+.pop-go:not(:disabled) { background: var(--chain, var(--me)); color: #0b0f24; }
+.pop-go:not(:disabled):hover { background: color-mix(in srgb, var(--chain, var(--me)) 88%, #fff); }
+
+.pop-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 12px 6px; margin: 4px 0 14px;
+  border-radius: 18px; background: rgb(255 255 255 / 0.06);
+}
+.pop-stats[hidden], .result-score[hidden] { display: none; }
+.pop-stats span { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.pop-stats b { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pop-stats small { font-size: 11px; color: var(--ink-3); }
+.result-card:has(.result-orb[data-mark="pop"]) { --c: #f4b942; }
+.result-orb[data-mark="pop"] {
+  background: radial-gradient(circle at 35% 30%, #fff, #f4b942 55%, #9a6a12);
+  box-shadow: 0 8px 24px rgb(244 185 66 / 0.4);
+}
+#resultTitle { font-variant-numeric: tabular-nums; }

@@ -22,63 +22,106 @@
 <body>
   <canvas id="scene" aria-label="3-D game board. Drag to spin, tap a slot to place a piece."></canvas>
 
-  <!-- Home (no ?g / ?play) -->
-  <section id="home" class="home" hidden>
-    <div class="home-inner">
-      <header class="home-head">
-        <h1>Tic Tac Cube</h1>
-        <p class="muted" id="homeTag">Four in a row, in any direction.</p>
-      </header>
+  <!-- Home: one game per page. Swipe (or arrow keys / dots) between Tic Tac Cube, Word Cube, Cube Pop. -->
+  <section id="home" class="hc" hidden>
+    <div class="hc-top">
+      <button class="tool" id="hcSound" type="button" aria-pressed="true" aria-label="Sound" title="Sound">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <button class="tool" id="hcSettingsBtn" type="button" aria-label="Settings" title="Settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9.2a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.4-2.3 1a7.4 7.4 0 0 0-2.6-1.5L14 2.6h-4l-.5 2.5a7.4 7.4 0 0 0-2.6 1.5l-2.3-1-2 3.4 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.4 2.3-1a7.4 7.4 0 0 0 2.6 1.5l.5 2.5h4l.5-2.5a7.4 7.4 0 0 0 2.6-1.5l2.3 1 2-3.4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
 
-      <div class="card">
-        <label class="field">
-          <span class="field-label">Your name</span>
-          <input id="homeName" maxlength="24" autocomplete="nickname" placeholder="Your name">
-        </label>
-        <fieldset class="swatches" id="homeSwatches"><legend>Your colour</legend></fieldset>
-        <fieldset class="seg" id="homeSize"><legend>Cube</legend></fieldset>
-        <p class="size-note muted small" id="sizeNote"></p>
-      </div>
-
-      <div class="home-actions">
-        <a class="btn primary big" id="playAI" href="?play=ai">Play the computer</a>
-        <a class="btn big" id="playLocal" href="?play=local">Two players, this device</a>
-        <button class="btn big" id="playFriend" type="button">Start a game with a friend</button>
-        <p class="muted small center" id="friendNote">Online games need a free Apple Account. Your friend can play here or in the iPhone app.</p>
-        <a class="btn big" id="playWords" href="words.html">Word Cube</a>
-      </div>
-
-      <section class="card" id="homeGamesWrap" hidden>
-        <div class="card-head">
-          <h2>Your games</h2>
-          <span class="badge" id="waitingBadge" hidden></span>
+    <div class="hc-track" id="hcTrack" tabindex="-1">
+      <article class="hc-page" data-game="ttt" aria-roledescription="slide" aria-label="Tic Tac Cube">
+        <div class="hc-hero"><canvas class="hc-canvas" aria-hidden="true"></canvas></div>
+        <div class="hc-panel">
+          <h1>Tic Tac Cube</h1>
+          <p class="hc-tag" id="tttTag">Four in a row, in any direction.</p>
+          <fieldset class="seg hc-size" data-size-for="ttt"><legend class="sr">Cube size</legend></fieldset>
+          <div class="hc-row"><a class="btn primary big hc-solo" id="tttAI" href="?play=ai">Play the computer</a></div>
+          <div class="hc-row"><button class="btn big" id="tttInvite" type="button">Invite</button><a class="btn big" id="tttLocal" href="?play=local">Same device</a></div>
         </div>
-        <ul class="games" id="homeGames"></ul>
-        <div class="home-signin" id="homeSignin" hidden>
-          <span class="muted small">Sign in to see whose move it is.</span>
-        </div>
-        <button class="linkish small" id="showArchived" type="button" hidden></button>
-        <ul class="games archived" id="archivedGames" hidden></ul>
-      </section>
+      </article>
 
-      <details class="card more">
-        <summary>Second player &amp; settings</summary>
-        <label class="field">
-          <span class="field-label">Second player’s name (this device)</span>
-          <input id="homeName2" maxlength="24" placeholder="Player 2">
-        </label>
-        <fieldset class="swatches" id="homeSwatches2"><legend>Their colour</legend></fieldset>
-        <fieldset class="seg" id="homePieces"><legend>Pieces</legend></fieldset>
-        <div class="home-toggles">
-          <button class="toggle" id="homeSound" aria-pressed="true" type="button">Sound</button>
-          <button class="toggle" id="homeThreats" aria-pressed="false" type="button">Show threats</button>
+      <article class="hc-page" data-game="words" aria-roledescription="slide" aria-label="Word Cube">
+        <div class="hc-hero"><canvas class="hc-canvas" aria-hidden="true"></canvas></div>
+        <div class="hc-panel">
+          <h1>Word Cube</h1>
+          <p class="hc-tag">Trace words through the cube, letter to touching letter.</p>
+          <fieldset class="seg hc-size" data-size-for="words"><legend class="sr">Cube size</legend></fieldset>
+          <div class="hc-row"><a class="btn primary big hc-solo" id="wPractice" href="words.html">Practice</a><a class="btn big hc-daily" id="wDaily" href="words.html?b=daily"><span>Today’s challenge</span><small id="wDailyDetail">4×4×4 · daily</small></a></div>
+          <div class="hc-row"><button class="btn big" id="wInvite" type="button">Invite</button><a class="btn big" id="wLocal" href="words.html?w=local">Same device</a></div>
+          <p class="hc-links"><a href="words.html">All boards &amp; how to play →</a></p>
         </div>
-      </details>
+      </article>
 
-      <p class="home-links"><a href="#" id="get-app-home">Get the iPhone app</a></p>
+      <article class="hc-page" data-game="pop" aria-roledescription="slide" aria-label="Cube Pop">
+        <div class="hc-hero"><canvas class="hc-canvas" aria-hidden="true"></canvas></div>
+        <div class="hc-panel">
+          <h1>Cube Pop</h1>
+          <p class="hc-tag">Pop chains of one colour. Turn the cube to choose where the rest fall.</p>
+          <fieldset class="seg hc-size" data-size-for="pop"><legend class="sr">Cube size</legend></fieldset>
+          <div class="hc-row"><a class="btn primary big hc-solo" id="pMoves" href="pop.html?m=moves">30 moves</a><a class="btn big hc-daily" id="pDaily" href="pop.html?m=daily"><span>Today’s challenge</span><small id="pDailyDetail">4×4×4 · daily</small></a></div>
+          <div class="hc-row"><button class="btn big" id="pInvite" type="button">Invite</button><a class="btn big" id="pLocal" href="pop.html?p=local">Same device</a></div>
+          <p class="hc-links"><a id="pZen" href="pop.html?m=zen">Zen · endless</a><a href="pop.html">How specials work →</a></p>
+        </div>
+      </article>
+    </div>
+
+    <div class="hc-foot">
+      <nav class="hc-dots" aria-label="Games">
+        <button type="button" data-page="0" aria-label="Tic Tac Cube"></button>
+        <button type="button" data-page="1" aria-label="Word Cube"></button>
+        <button type="button" data-page="2" aria-label="Cube Pop"></button>
+      </nav>
+      <button class="hc-games" id="gamesBtn" type="button" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8.5" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 19c.6-3 2.8-4.7 5.5-4.7s4.9 1.7 5.5 4.7M15.5 5.6a3 3 0 0 1 0 5.8M17.5 14.5c1.6.6 2.7 2.2 3 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span>Your games</span><span class="hc-count" id="gamesCount">0</span>
+        <span class="hc-turn" id="gamesTurn" hidden></span>
+      </button>
       <p class="legal center">© 2026 FRANCESCO BERTOCCI, LLC</p>
     </div>
   </section>
+
+  <!-- Your games (all three games, from this browser) -->
+  <div class="invite-backdrop" id="gamesSheet" hidden>
+    <div class="invite-card hc-sheet" role="dialog" aria-modal="true" aria-labelledby="gamesTitle">
+      <span class="invite-grip" aria-hidden="true"></span>
+      <div class="hc-sheet-head">
+        <h2 id="gamesTitle">Your games</h2>
+        <span class="badge" id="gamesBadge" hidden></span>
+      </div>
+      <ul class="games" id="gamesList"></ul>
+      <div class="home-signin" id="gamesSignin" hidden>
+        <span class="muted small">Sign in to see whose move it is.</span>
+        <div id="apple-sign-in-button"></div>
+        <div id="apple-sign-out-button" hidden></div>
+      </div>
+      <button class="linkish small" id="gamesArchivedBtn" type="button" hidden></button>
+      <ul class="games archived" id="gamesArchived" hidden></ul>
+      <button class="btn ghost invite-done" id="gamesDone" type="button">Done</button>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <dialog id="settingsDialog" class="hc-settings">
+    <form method="dialog">
+      <h2>Settings</h2>
+      <label class="field"><span class="field-label">Your name</span><input id="homeName" maxlength="24" autocomplete="nickname" placeholder="Your name"></label>
+      <fieldset class="swatches" id="homeSwatches"><legend>Your colour</legend></fieldset>
+      <label class="field"><span class="field-label">Second player’s name (this device)</span><input id="homeName2" maxlength="24" placeholder="Player 2"></label>
+      <fieldset class="swatches" id="homeSwatches2"><legend>Their colour</legend></fieldset>
+      <fieldset class="seg" id="homePieces"><legend>Pieces</legend></fieldset>
+      <div class="home-toggles">
+        <button class="toggle" id="homeSound" aria-pressed="true" type="button">Sound</button>
+        <button class="toggle" id="homeThreats" aria-pressed="false" type="button">Show threats</button>
+      </div>
+      <p class="home-links"><a href="#" id="get-app-home">Get the iPhone app</a></p>
+      <div class="dialog-actions"><button class="btn primary" value="ok">Done</button></div>
+    </form>
+  </dialog>
 
   <!-- Game HUD -->
   <section id="hud" class="hud" hidden>

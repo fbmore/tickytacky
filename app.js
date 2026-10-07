@@ -7,6 +7,7 @@ import {
   boardAt, threats, describeLine, starterFor, SIZES,
 } from "./game.js";
 import { decide, LEVELS, BANTER } from "./ai.js";
+import { initHome } from "./home.js";
 
 const params = new URLSearchParams(location.search);
 const GAME_ID = (params.get("g") || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 32);
@@ -383,12 +384,16 @@ function layout(now) {
 const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 const easeOutBack = (t) => { const c1 = 1.4, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
 
+/** Wide screens (iPad, unfolded foldables, desktop): controls move to a right-hand panel. */
+const isWide = () => innerWidth >= 700 && innerWidth > innerHeight * 0.9;
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
-  // Keep the cube comfortably framed on narrow (phone) screens.
-  camera.fov = w / h < 0.8 ? 52 : 38;
+  const panel = isWide() && !$("hud").hidden ? Math.min(420, w * 0.38) : 0;
+  // Keep the cube comfortably framed on narrow (phone) screens, and in the free area when wide.
+  camera.fov = (w - panel) / h < 0.8 ? 52 : 38;
+  if (panel) camera.setViewOffset(w, h, panel / 2, 0, w, h); else camera.clearViewOffset();
   camera.updateProjectionMatrix();
 }
 addEventListener("resize", resize);
@@ -1199,210 +1204,24 @@ function segPicker(fieldset, name, options, selected, onChange) {
   }
 }
 
-/* ───────────────────────────── home ───────────────────────────── */
-
-let homeAuth = null;
-let homeReframe = () => {};
-function showcase() {
-  const n = prefs.size, g = geometry(n), c = Math.floor(n / 2);
-  const cells = [g.idx(c, c, c), g.idx(0, 0, 0), g.idx(c, n - 1, c), g.idx(n - 1, n - 1, n - 1), g.idx(0, c, n - 1),
-    g.idx(n - 1, 0, 0), g.idx(c, 0, c), g.idx(0, n - 1, 0), g.idx(n - 1, c, c)];
-  let evs = [{ recordName: "a", kind: "join", author: "x", ts: 1, cell: n, color: prefs.color },
-             { recordName: "b", kind: "join", author: "o", ts: 2, color: resolveColors(prefs.color, prefs.color === "teal" ? "coral" : "teal").O }];
-  let t = 10;
-  for (const cell of [...new Set(cells)]) {
-    const s0 = fold(evs);
-    const next = [...evs, { recordName: "m" + t, kind: "move", author: s0.turn === "X" ? "x" : "o", round: 0, cell, ts: t++ }];
-    if (!fold(next).winner) evs = next; // never show a finished line on the title screen
-  }
-  const s = fold(evs);
-  if (s.size !== N) { buildBoard(s.size); homeReframe(); }
-  setColors(s.colors);
-  syncBoard({ ...s, lastMove: null, instant: true });
-}
-
-function renderHomeChrome() {
-  document.documentElement.style.setProperty("--me", hexOf(prefs.color));
-  $("sizeNote").textContent = SIZE_NOTES[prefs.size];
-  $("homeTag").textContent = `${["", "", "", "Three", "Four", "Five"][prefs.size]} in a row, in any direction.`;
-}
-
-const STATUS_LABEL = { mine: "Your move", theirs: "Their move", waiting: "Waiting for them to join", rematch: "Wants a rematch", over: "Round over", ended: "Ended" };
-const summaries = new Map();
-
-function renderGames() {
-  const all = savedGames();
-  const active = all.filter((g) => !g.archived);
-  const archived = all.filter((g) => g.archived);
-  $("homeGamesWrap").hidden = !all.length;
-  const urgent = (g) => ["mine", "rematch"].includes(summaries.get(g.id)?.status);
-  active.sort((a, b) => (urgent(b) - urgent(a)) || ((summaries.get(b.id)?.last ?? b.t) - (summaries.get(a.id)?.last ?? a.t)));
-  const waiting = active.filter(urgent).length;
-  $("waitingBadge").hidden = !waiting;
-  $("waitingBadge").textContent = `${waiting} waiting on you`;
-  $("homeGames").replaceChildren(...active.map((g) => gameRow(g, false)));
-  $("showArchived").hidden = !archived.length;
-  $("showArchived").textContent = `${$("archivedGames").hidden ? "Show" : "Hide"} archived (${archived.length})`;
-  $("archivedGames").replaceChildren(...archived.map((g) => gameRow(g, true)));
-}
-
-function gameRow(g, archived) {
-  const sum = summaries.get(g.id);
-  const li = document.createElement("li");
-  li.className = "game-row" + (["mine", "rematch"].includes(sum?.status) ? " mine" : "");
-  const a = document.createElement("a");
-  a.href = `?g=${g.id}`;
-  const title = document.createElement("span");
-  title.className = "g-title";
-  const opp = sum?.opp || g.opp;
-  title.textContent = opp ? `vs ${opp}` : "Invite sent";
-  const sub = document.createElement("span");
-  sub.className = "g-sub";
-  sub.textContent = sum ? `${STATUS_LABEL[sum.status]} · ${sum.size}³` : (g.closed ? "Ended" : homeAuth?.signedIn ? "…" : " ");
-  a.append(title, sub);
-  const score = document.createElement("span");
-  score.className = "g-score";
-  if (sum && sum.status !== "waiting") score.textContent = `${sum.mine}–${sum.theirs}`;
-  const actions = document.createElement("span");
-  actions.className = "g-actions";
-  const iconBtn = (label, path, onClick) => {
-    const b = document.createElement("button");
-    b.className = "icon-btn"; b.type = "button"; b.setAttribute("aria-label", label); b.title = label;
-    b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    b.addEventListener("click", onClick);
-    return b;
-  };
-  if (archived) {
-    if (!g.closed) actions.append(iconBtn("Restore", "M4 12a8 8 0 1 0 3-6.2M4 4v4h4", () => { rememberGame(g.id, { archived: false, t: g.t }); renderGames(); }));
-    actions.append(iconBtn("Remove", "M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12", () => { setSavedGames(savedGames().filter((x) => x.id !== g.id)); renderGames(); }));
-  } else {
-    actions.append(iconBtn("Archive", "M4 6h16v4H4zM6 10v9h12v-9M10 14h4", () => { rememberGame(g.id, { archived: true, t: g.t }); renderGames(); }));
-    if (homeAuth?.signedIn) {
-      actions.append(iconBtn(sum?.status === "waiting" ? "Cancel invite" : "End game", "M6 6l12 12M18 6L6 18", () => {
-        if (li.querySelector(".g-confirm")) return;
-        const c = document.createElement("div");
-        c.className = "g-confirm";
-        const q = document.createElement("span");
-        q.className = "muted small";
-        q.textContent = sum?.status === "waiting" ? "Cancel the invite?" : "End it for both of you?";
-        const yes = document.createElement("button");
-        yes.className = "btn small danger"; yes.type = "button"; yes.textContent = sum?.status === "waiting" ? "Cancel invite" : "End game";
-        const no = document.createElement("button");
-        no.className = "btn small"; no.type = "button"; no.textContent = "Keep";
-        no.addEventListener("click", () => c.remove());
-        yes.addEventListener("click", async () => {
-          yes.disabled = true;
-          try {
-            const { db } = await cloudSetup(() => {});
-            await saveEvent(db, g.id, { kind: "close", author: homeAuth.me, authorName: myName() || "Player" });
-            rememberGame(g.id, { closed: true, t: g.t });
-            summaries.set(g.id, { ...(sum || { size: 4, mine: 0, theirs: 0 }), status: "ended" });
-          } catch (err) { console.warn(err); yes.disabled = false; q.textContent = "Couldn’t reach iCloud — try again."; return; }
-          renderGames();
-        });
-        c.append(q, yes, no);
-        li.append(c);
-        no.focus({ preventScroll: true });
-      }));
-    }
-  }
-  li.append(a, score, actions);
-  return li;
-}
-
-async function refreshGames() {
-  if (!homeAuth?.signedIn) return;
-  const { db } = await cloudSetup(() => {});
-  const me = homeAuth.me;
-  await Promise.all(savedGames().filter((g) => !g.archived).map(async (g) => {
-    try {
-      const s = fold(await queryGame(db, g.id));
-      const role = roleOf(s, me);
-      if (!role) return;
-      const opp = other(role);
-      let status;
-      if (s.closedBy) status = "ended";
-      else if (!s.players.O) status = "waiting";
-      else if (s.winner) status = s.ready[opp] && !s.ready[role] ? "rematch" : "over";
-      else status = s.turn === role ? "mine" : "theirs";
-      summaries.set(g.id, { status, size: s.size, mine: s.score[role], theirs: s.score[opp], opp: s.players[opp]?.name || "", last: 0 });
-      if (s.closedBy) rememberGame(g.id, { closed: true, t: g.t, opp: s.players[opp]?.name || g.opp });
-    } catch (err) { console.warn(err); }
-  }));
-  renderGames();
-}
-
-function bootHome() {
-  $("home").hidden = false;
-  renderHomeChrome();
-  showcase();
-  controls.autoRotate = !reduceMotion;
-  controls.enabled = false;
-  // Small and high: the cube floats in the band above the title.
-  const frame = () => {
-    controls.maxDistance = 100;
-    camera.position.copy(CAM_DIR).multiplyScalar((prefs.size / 4) * (innerWidth / innerHeight < 0.8 ? 1.55 : 2.1));
-    camera.setViewOffset(innerWidth, innerHeight, 0, innerHeight * 0.3, innerWidth, innerHeight);
-  };
-  frame();
-  addEventListener("resize", frame);
-  homeReframe = frame;
-  // The cube sits behind the page; let it fade away as the settings scroll over it.
-  $("home").addEventListener("scroll", () => {
-    canvas.style.opacity = String(Math.max(0, 1 - $("home").scrollTop / 220));
-  }, { passive: true });
-
-  $("homeName").value = myName();
-  $("homeName").addEventListener("input", (e) => store.set("ttc.name", e.target.value.trim().slice(0, 24)));
-  $("homeName2").value = store.get("ttc.name2") || "";
-  $("homeName2").addEventListener("input", (e) => store.set("ttc.name2", e.target.value.trim().slice(0, 24)));
-  const paint2 = () => {
-    for (const input of $("homeSwatches2").querySelectorAll("input")) {
-      input.checked = input.value === prefs.color2;
-      input.disabled = input.value === prefs.color;
-      input.closest(".swatch").style.opacity = input.disabled ? 0.3 : "";
-    }
-  };
-  swatchPicker($("homeSwatches"), "homeColor", prefs.color, (c) => { store.set("ttc.color", c); renderHomeChrome(); showcase(); paint2(); });
-  swatchPicker($("homeSwatches2"), "homeColor2", prefs.color2, (c) => store.set("ttc.color2", c));
-  paint2();
-  segPicker($("homeSize"), "homeSizePick", SIZES.map((n) => [n, `${n}×${n}×${n}`]), prefs.size, (n) => { store.set("ttc.size", n); renderHomeChrome(); showcase(); });
-  segPicker($("homePieces"), "homePiecesPick", PIECE_OPTIONS, pieceStyle, (v) => setPieceStyle(v));
-  const homeToggle = (id, on, set) => {
-    setToggle(id, on);
-    $(id).addEventListener("click", () => { const v = $(id).getAttribute("aria-pressed") !== "true"; setToggle(id, v); set(v); });
-  };
-  // Home and in-game switches share one setting, so keep both in sync.
-  homeToggle("homeSound", sound.on, (v) => { sound.on = v; store.set("ttc.sound", v ? "1" : "0"); setToggle("soundToggle", v); if (v) { sound.unlock(); sound.tick(); } });
-  homeToggle("homeThreats", showThreats, (v) => { showThreats = v; store.set("ttc.threats", v ? "1" : "0"); setToggle("threatToggle", v); });
-
-  $("playFriend").addEventListener("click", () => {
-    location.href = `?g=${newGameId()}&host=${prefs.size}`;
-  });
-  $("showArchived").addEventListener("click", () => { $("archivedGames").hidden = !$("archivedGames").hidden; renderGames(); });
-
-  renderGames();
-  // Live status needs the player's Apple sign-in (if they've signed in here before, it's remembered).
-  if (savedGames().length) {
-    $("homeSignin").append($("signin"));
-    cloudSetup((auth) => {
-      homeAuth = auth;
-      $("homeSignin").hidden = auth.signedIn || !!auth.authError;
-      $("signin").hidden = auth.signedIn || !!auth.authError;
-      renderGames();
-      refreshGames();
-    }).catch((err) => console.warn(err));
-    setInterval(() => { if (!document.hidden) refreshGames(); }, 20000);
-  }
-}
-
 /* ───────────────────────────── boot ───────────────────────────── */
 
 async function boot() {
+  if (!GAME_ID && !PLAY) {
+    // Home: its own carousel with live previews (home.js); the game board stays idle.
+    canvas.hidden = true;
+    initHome({
+      sound, setSoundOn: (v) => { sound.on = v; if (v) { sound.unlock(); sound.tick(); } },
+      onPieces: (v) => store.set("ttc.pieces", v), pieceOptions: PIECE_OPTIONS, pieceStyle: () => store.get("ttc.pieces") || "orbs",
+    });
+    return;
+  }
+  for (const id of ["home", "gamesSheet", "settingsDialog"]) $(id)?.remove();
+  $("hud").hidden = false;
+  resize();
   buildBoard(PLAY ? prefs.size : SIZES.includes(HOST_SIZE) ? HOST_SIZE : 4);
   requestAnimationFrame(loop);
-  for (const id of ["getApp", "get-app-home"]) $(id).addEventListener("click", (e) => e.preventDefault());
-  if (!GAME_ID && !PLAY) { bootHome(); return; }
+  $("getApp").addEventListener("click", (e) => e.preventDefault());
 
   $("hud").hidden = false;
   $("openApp").href = `tictaccube://g/${GAME_ID}`;

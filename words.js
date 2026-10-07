@@ -368,18 +368,22 @@ function rotate(dx, dy, ticks = true) {
 
 /** Fit the cube into the free band between `top` and `bottom` (CSS px). */
 let band = () => ({ top: 0, bottom: innerHeight });
+/** Wide screens (iPad, unfolded foldables, desktop): the controls sit in a right-hand panel. */
+const isWide = () => innerWidth >= 700 && innerWidth > innerHeight * 0.9;
 function frameCamera() {
   const W = innerWidth, H = innerHeight;
   renderer.setSize(W, H, false);
   camera.aspect = W / H;
-  const { top, bottom } = band();
-  const availH = Math.max(120, bottom - top), centre = (top + bottom) / 2;
-  camera.setViewOffset(W, H, 0, H / 2 - centre, W, H);
+  const playing = !$("play").hidden;
+  const panel = playing && isWide() ? Math.min(420, W * 0.38) : 0;
+  const { top, bottom } = panel ? { top: 16, bottom: H - 16 } : band();
+  const availH = Math.max(120, bottom - top), centre = (top + bottom) / 2, availW = W - panel;
+  camera.setViewOffset(W, H, panel / 2, H / 2 - centre, W, H);
   const n = cube.puzzle?.n ?? 4;
-  // Radius of the spinning cube (layers at their widest closed spacing) with a little air.
+  // Radius of the spinning cube with a little air.
   const R = 0.5 * Math.hypot(n * PITCH, n * PITCH, n * SPREAD.closed) * 0.82;
   const f = (H / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const dist = (R * f) / (Math.min(availH, W - 24) / 2) + R * 0.15;
+  const dist = (R * f) / (Math.min(availH, availW - 24) / 2) + R * 0.15;
   camera.position.set(0, 0, dist);
   camera.lookAt(0, 0, 0);
   camera.updateProjectionMatrix();

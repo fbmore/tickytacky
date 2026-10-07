@@ -4,13 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#070b1f">
-  <title>Word Cube · Tic Tac Cube</title>
-  <meta name="description" content="Trace words through a 3-D cube of letters. A new cube every day, the same for everyone. Free in your browser.">
+  <title>Cube Pop · Tic Tac Cube</title>
+  <meta name="description" content="Pop chains of one colour in a 3-D cube. Turn the cube to choose where the rest fall. Free in your browser.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="words.css">
+  <link rel="stylesheet" href="pop.css">
   <script type="importmap">
   {
     "imports": {
@@ -21,72 +22,39 @@
   </script>
 </head>
 <body>
-  <canvas id="scene" aria-label="3-D letter cube. Drag to spin, tap letters to spell a word."></canvas>
+  <canvas id="scene" aria-label="3-D cube of coloured orbs. Drag to turn it, tap touching orbs of one colour to make a chain."></canvas>
 
-  <!-- Hub: today's cube, practice boards, how to play -->
+  <!-- How Cube Pop works (no game in the URL) -->
   <section id="hub" class="home" hidden>
     <div class="home-inner">
       <header class="home-head">
-        <h1>Word Cube</h1>
-        <p class="muted">Trace words through the cube, one neighbouring letter at a time: up, down, left, right, forward or back.</p>
+        <h1>Cube Pop</h1>
+        <p class="muted">Trace 3 or more touching orbs of one colour and pop them. Turn the cube to choose which way the rest fall.</p>
       </header>
-
-      <a class="card wc-daily" id="dailyCard" href="#">
-        <span class="wc-daily-top">
-          <span class="wc-daily-title">Today’s cube</span>
-          <span class="muted small" id="dailyDate"></span>
-        </span>
-        <span class="muted" id="dailyLine">Same letters for everyone today. No timer.</span>
-        <span class="wc-pill" id="dailyGo">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>
-          <span id="dailyGoLabel">Play</span>
-        </span>
-      </a>
-
       <section class="wc-section">
-        <h2 class="wc-section-title">Play a friend</h2>
-        <div class="card wc-duo">
-          <p class="muted small">Take turns on the same cube, ten words each. Every word belongs to whoever finds it first.</p>
-          <fieldset class="seg" id="duoSize"><legend>Cube</legend></fieldset>
-          <button class="btn primary big" id="duoFriend" type="button">Start a game with a friend</button>
-          <a class="btn big" id="duoLocal" href="?w=local">Two players, this device</a>
-        </div>
-        <div class="card" id="duoGamesWrap" hidden>
-          <div class="card-head">
-            <h2>Your games</h2>
-            <span class="badge" id="duoBadge" hidden></span>
-          </div>
-          <ul class="games" id="duoGames"></ul>
-          <div class="home-signin" id="duoSignin" hidden><span class="muted small">Sign in to see whose turn it is.</span></div>
-          <button class="linkish small" id="duoShowArchived" type="button" hidden></button>
-          <ul class="games archived" id="duoArchived" hidden></ul>
-        </div>
-      </section>
-
-      <section class="wc-section">
-        <h2 class="wc-section-title">Practice</h2>
-        <ul class="wc-practice" id="practice"></ul>
-      </section>
-
-      <section class="wc-section">
-        <h2 class="wc-section-title">How to play</h2>
-        <ul class="wc-rules" id="rules">
-          <li><span aria-hidden="true">☝︎</span>Tap a letter, then a neighbouring one. The rings show where you can go next.</li>
-          <li><span aria-hidden="true">↶</span>Tap the last letter again to take it back.</li>
-          <li><span aria-hidden="true">⬡</span>Letters connect through faces only: no diagonals. Each letter once per word.</li>
-          <li><span aria-hidden="true">✦</span>Find words to reveal the rest of the cube, in three waves.</li>
-          <li><span aria-hidden="true">★</span>Longer words score more. A word through every layer earns +3.</li>
-          <li><span aria-hidden="true">✓</span>Other real words are accepted as extras: they’re kept with your words but don’t score.</li>
-          <li class="wc-keys"><span aria-hidden="true">⌨︎</span>On a keyboard: Enter submits, Backspace takes a letter back, Esc clears.</li>
+        <h2 class="wc-section-title">Specials</h2>
+        <ul class="wc-rules pop-rules">
+          <li><span aria-hidden="true">💣</span><b>Pop 5 in one chain</b> — makes a bomb: pops its 6 neighbours when used.</li>
+          <li><span aria-hidden="true">✳️</span><b>Pop 6</b> — makes a beam: clears its whole line in the direction things fall.</li>
+          <li><span aria-hidden="true">🔮</span><b>Pop 7 or more</b> — makes a prism: wild, joins a chain of any colour.</li>
+          <li><span aria-hidden="true">✨</span><b>Gold orbs</b> — double the points of the chain they’re in.</li>
+          <li><span aria-hidden="true">↯</span><b>Chain reactions</b> — specials caught in a blast go off too, multiplying the score.</li>
         </ul>
       </section>
-
-      <p class="home-links"><a href="./?page=words">← All games</a></p>
+      <section class="wc-section">
+        <h2 class="wc-section-title">Scoring</h2>
+        <ul class="wc-rules pop-rules">
+          <li><span aria-hidden="true">★</span>Chain length² × 10, +15 for each extra orb a blast takes, ×1.5 for every special that goes off.</li>
+          <li><span aria-hidden="true">⇣</span>“Down” is whichever face of the cube points to the bottom of your screen — a soft glow marks it.</li>
+          <li><span aria-hidden="true">⇄</span>Two players take turns on the same cube, ten pops each. Highest score wins.</li>
+        </ul>
+      </section>
+      <p class="home-links"><a href="./?page=pop">← All games</a></p>
       <p class="legal center">© 2026 FRANCESCO BERTOCCI, LLC</p>
     </div>
   </section>
 
-  <!-- Playing one board -->
+  <!-- Playing -->
   <section id="play" class="wc-play" hidden>
     <header class="wc-top">
       <p class="wc-title" id="boardTitle"></p>
@@ -97,35 +65,24 @@
             <span class="pname" id="nameX">Waiting…</span>
             <b class="wc-pscore" id="scoreX">0</b>
           </button>
-          <span class="wc-turns" id="turns">Turn 1 of 10</span>
+          <span class="wc-turns" id="turns">Pop 1 of 10</span>
           <button class="wc-player right" id="pO" data-mark="O" type="button">
             <b class="wc-pscore" id="scoreO">0</b>
             <span class="pname" id="nameO">Waiting…</span>
             <span class="chip-dot" data-mark="O" aria-hidden="true"></span>
           </button>
         </div>
-        <div class="wc-row" id="soloRank">
-          <span class="wc-rank" id="rank">Getting Started</span>
-          <span class="wc-score"><b id="score">0</b> pts</span>
-        </div>
-        <div class="wc-bar" id="rankBar" role="img"><span class="wc-fill" id="rankFill"></span></div>
-        <div class="wc-row">
-          <button class="wc-count" id="wordsBtn" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5A1.5 1.5 0 0 1 6.5 4H18v14H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H18v-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-            <span id="wordCount">0 of 0 words</span>
-          </button>
-          <span class="wc-phase" id="phase" role="img">
-            <span class="muted small" id="phaseHint"></span>
-            <span class="wc-dot"></span><span class="wc-dot"></span><span class="wc-dot"></span>
-          </span>
+        <div class="pop-solo" id="solo">
+          <div><b class="pop-big" id="score">0</b><span class="muted small" id="best">Score</span></div>
+          <div class="right" id="movesWrap"><b class="pop-big" id="moves">30</b><span class="muted small">moves left</span></div>
         </div>
       </div>
-      <div class="wc-toast-wrap" aria-live="polite"><span class="wc-toast" id="toast" hidden></span></div>
+      <div class="wc-toast-wrap" aria-live="polite"><span class="wc-toast pop-float" id="toast" hidden></span></div>
       <div id="toasts" class="toasts wc-chat-toasts" aria-live="polite"></div>
     </header>
 
     <footer class="wc-bottom">
-      <p class="status wc-status" id="status" aria-live="polite" hidden></p>
+      <p class="status wc-status" id="status" aria-live="polite"></p>
       <div class="action-row wc-duo-actions" id="duoActions" hidden>
         <button class="btn primary" id="inviteBtn" type="button" hidden>Invite a friend</button>
         <button class="btn primary" id="againBtn" type="button" hidden>Ask for a rematch</button>
@@ -136,19 +93,17 @@
         </div>
         <div id="apple-sign-out-button" hidden></div>
       </div>
-      <div class="wc-letters" id="letters"><span class="muted" id="lettersHint">Tap a letter, then its neighbours</span></div>
       <div class="wc-actions">
-        <button class="btn wc-clear" id="clearBtn" type="button" aria-label="Clear" disabled>
+        <button class="btn wc-clear" id="clearBtn" type="button" aria-label="Clear chain" disabled>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </button>
-        <button class="btn wc-enter" id="enterBtn" type="button" disabled>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6v5a3 3 0 0 1-3 3H6m0 0 4-4m-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Enter
+        <button class="btn wc-enter pop-go" id="popBtn" type="button" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 13.6 9l5.4 1.6-5.4 1.6L12 17.7l-1.6-5.5L5 10.6 10.4 9zM18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" fill="currentColor"/></svg>
+          <span id="popLabel">Trace a chain</span>
         </button>
-        <button class="btn wc-pass" id="passBtn" type="button" hidden>Pass</button>
       </div>
-      <nav class="toolbar" aria-label="Word Cube controls">
-        <a class="tool" href="words.html" aria-label="All boards" title="All boards">
+      <nav class="toolbar" aria-label="Cube Pop controls">
+        <a class="tool" href="./?page=pop" aria-label="All games" title="All games">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
         <button class="tool" id="spreadBtn" type="button" aria-pressed="false" aria-label="Spread the layers" title="Spread the layers">
@@ -160,11 +115,8 @@
         <button class="tool" id="chatBtn" type="button" popovertarget="chatPop" aria-label="Quick messages" title="Quick messages" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14v9H10l-4 3.5v-3.5H5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
         </button>
-        <button class="tool" id="menuBtn" type="button" popovertarget="menuPop" aria-label="More" title="More" hidden>
+        <button class="tool" id="menuBtn" type="button" popovertarget="menuPop" aria-label="More" title="More">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="18" cy="12" r="1.6" fill="currentColor"/></svg>
-        </button>
-        <button class="tool" id="shareBtn" type="button" aria-label="Share your progress" title="Share your progress">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M8 8l4-4 4 4M6 12v6.5A1.5 1.5 0 0 0 7.5 20h9a1.5 1.5 0 0 0 1.5-1.5V12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </nav>
 
@@ -172,6 +124,7 @@
         <div class="chat" id="chat"><div class="chips" id="chips"></div></div>
       </div>
       <div class="pop menu-pop" id="menuPop" popover>
+        <button class="menu-item" id="newGameBtn" type="button" hidden>New game</button>
         <span class="menu-row resign" id="resignWrap" hidden>
           <button class="menu-item danger-text" id="resignBtn" type="button">Resign this game</button>
           <span class="resign-confirm" id="resignConfirm" hidden>
@@ -189,7 +142,8 @@
           </span>
         </span>
         <span class="menu-sep" aria-hidden="true"></span>
-        <a class="menu-item" href="words.html">All Word Cube games</a>
+        <a class="menu-item" href="pop.html">How specials work</a>
+        <a class="menu-item" href="./?page=pop">All games</a>
       </div>
     </footer>
   </section>
@@ -224,64 +178,41 @@
       </div>
       <ol class="invite-steps">
         <li><b>Send the link</b><span>Messages, WhatsApp, email — anything works.</span></li>
-        <li><b>Take your first turn</b><span>You don’t have to wait: find a word now. They’ll see it replayed when they open the link.</span></li>
-        <li><b>Ten words each, any time</b><span>No timer. Keep this tab around — its title shows “● Your turn” when it’s your go.</span></li>
+        <li><b>Take your first pop</b><span>You don’t have to wait: pop a chain now. They’ll see it replayed when they open the link.</span></li>
+        <li><b>Ten pops each, any time</b><span>No timer. Keep this tab around — its title shows “● Your turn” when it’s your go.</span></li>
       </ol>
       <button class="btn ghost invite-done" id="inviteDone" type="button">Done</button>
     </div>
   </div>
 
-  <!-- End-of-game card -->
+  <!-- End card (solo and two players) -->
   <div class="result-backdrop" id="result" hidden>
     <div class="result-card" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
       <div class="result-orb" id="resultOrb" aria-hidden="true"></div>
-      <h2 id="resultTitle">You win!</h2>
+      <h2 id="resultTitle">Out of moves</h2>
       <p class="result-how" id="resultHow"></p>
-      <div class="result-score">
+      <div class="result-score" id="resultDuo">
         <div><span class="rs-num" id="rsX">0</span><span class="rs-name" id="rsNameX">X</span></div>
         <span class="rs-dash" aria-hidden="true">–</span>
         <div><span class="rs-num" id="rsO">0</span><span class="rs-name" id="rsNameO">O</span></div>
       </div>
+      <div class="pop-stats" id="resultSolo">
+        <span><b id="stChain">0</b><small>longest pop</small></span>
+        <span><b id="stSpecials">0</b><small>specials made</small></span>
+        <span><b id="stBest">0</b><small>best</small></span>
+      </div>
       <ul class="result-next" id="resultNext"></ul>
       <div class="result-actions">
-        <button class="btn primary" id="resultAgain" type="button">Ask for a rematch</button>
+        <button class="btn primary" id="resultAgain" type="button">Play again</button>
         <div class="result-secondary">
-          <button class="btn" id="resultWords" type="button">See the words</button>
+          <button class="btn" id="resultShare" type="button">Share</button>
           <button class="btn ghost" id="resultClose" type="button">Look at the cube</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Found words: bottom sheet on phones, centred on wider screens -->
-  <div class="invite-backdrop" id="wordsSheet" hidden>
-    <div class="invite-card wc-words" role="dialog" aria-modal="true" aria-labelledby="wordsTitle">
-      <span class="invite-grip" aria-hidden="true"></span>
-      <div class="wc-words-head">
-        <h2 id="wordsTitle">Your words</h2>
-        <span class="muted" id="wordsTally">0 / 0</span>
-      </div>
-      <div class="wc-words-list" id="wordsList"></div>
-      <button class="btn ghost invite-done" id="wordsDone" type="button">Done</button>
-    </div>
-  </div>
-
-  <!-- Progress / share card -->
-  <div class="result-backdrop" id="done" hidden>
-    <div class="result-card wc-done" role="dialog" aria-modal="true" aria-label="Your progress">
-      <canvas class="wc-share" id="shareCanvas" width="1200" height="1200"></canvas>
-      <p class="muted small" id="nextRank"></p>
-      <div class="result-actions">
-        <button class="btn primary" id="shareGo" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18"><path d="M12 4v11M8 8l4-4 4 4M6 12v6.5A1.5 1.5 0 0 0 7.5 20h9a1.5 1.5 0 0 0 1.5-1.5V12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Share
-        </button>
-        <button class="btn ghost" id="doneClose" type="button">Keep playing</button>
-      </div>
-    </div>
-  </div>
-
   <script src="https://cdn.apple-cloudkit.com/ck/2/cloudkit.js" async></script>
-  <script type="module" src="words.js"></script>
+  <script type="module" src="pop.js"></script>
 </body>
 </html>
