@@ -21,8 +21,9 @@ export const encodeWord = (word, path) => `${word}|${path.join(",")}`;
 export function decodeWord(text) {
   const [word, cells] = String(text || "").split("|");
   if (!word || !cells) return null;
-  const path = cells.split(",").map(Number);
-  return path.every((c) => Number.isInteger(c)) ? { word, path } : null;
+  const parts = cells.split(",");
+  // Digits only, so every client rejects exactly the same malformed input.
+  return parts.every((c) => /^[0-9]{1,4}$/.test(c)) ? { word, path: parts.map(Number) } : null;
 }
 
 /** Highest reveal phase (0–2) given every word found so far (by either player). */

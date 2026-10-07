@@ -2,9 +2,24 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["5C5ZJ7G7SE.com.fbmore.TicTacCube"],
+        "appIDs": [
+          "5C5ZJ7G7SE.com.fbmore.TicTacCube"
+        ],
         "components": [
-          { "/": "/*", "?": { "g": "?*" }, "comment": "Game links" }
+          {
+            "/": "/*",
+            "?": {
+              "g": "?*"
+            },
+            "comment": "Game links"
+          },
+          {
+            "/": "/*",
+            "?": {
+              "w": "?*"
+            },
+            "comment": "Word Cube game links"
+          }
         ]
       }
     ]
