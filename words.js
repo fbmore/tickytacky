@@ -776,14 +776,23 @@ function rememberDuo(id, patch) {
   setSavedDuos(list);
 }
 
-/** puzzle for (size, round) of a game, cached. */
-function duoFolder(book) {
+/** puzzle for (size, round, language) of a game, cached. `books` by language; English is always there. */
+function duoFolder(books) {
   const cache = new Map();
-  return (events, gameId) => foldMatch(sortEvents(events), gameId, (n, r) => {
-    const key = `${gameId}:${n}:${r}`;
+  return (events, gameId) => foldMatch(sortEvents(events), gameId, (n, r, lang = "en") => {
+    const book = books[lang] ?? books.en;
+    const key = `${gameId}:${n}:${r}:${lang}`;
     if (!cache.has(key)) cache.set(key, book.puzzle({ size: n, index: boardIndex(gameId, r, book.practiceCount(n)) }));
     return cache.get(key);
   });
+}
+
+/** The Italian and Spanish books, for games started in the app in those languages. Missing ones fall back to English. */
+async function loadBooks(book) {
+  const books = { en: book };
+  await Promise.all(["it", "es"].map((l) => fetch(`puzzles-${l}.json`).then((r) => (r.ok ? r.json() : null))
+    .then((j) => { if (j) books[l] = makeBook(j); }).catch(() => {})));
+  return books;
 }
 
 /** Two people on this device: events kept in this browser; whoever's turn it is acts. */
@@ -866,8 +875,8 @@ const pickedIn = (fieldset) => fieldset.querySelector("input:checked")?.value;
 const other = (r) => (r === "X" ? "O" : "X");
 const upper = (w) => w.toUpperCase();
 
-function bootMatch(book, rawId) {
-  const fold = duoFolder(book);
+function bootMatch(book, rawId, books = { en: book }) {
+  const fold = duoFolder(books);
   const local = rawId === "local";
   const sizeParam = WORD_SIZES.includes(Number(params.get("size"))) ? Number(params.get("size")) : 0;
   let gameId = local ? null : rawId;
@@ -1407,8 +1416,8 @@ function bootMatch(book, rawId) {
 /* ── hub: start a game, your games ── */
 
 const DUO_STATUS = { mine: "Your turn", theirs: "Their turn", waiting: "Waiting for them to join", rematch: "Wants a rematch", over: "Game over", ended: "Ended" };
-function bootDuoHub(book) {
-  const fold = duoFolder(book);
+function bootDuoHub(book, books = { en: book }) {
+  const fold = duoFolder(books);
   const syncLocal = () => { $("duoLocal").href = `?w=local&size=${duoPrefs.size}`; };
   segPicker($("duoSize"), "duoSizePick", WORD_SIZES.map((n) => [n, `${n}×${n}×${n}`]), duoPrefs.size, (n) => { store.set("ttc.wsize", n); syncLocal(); });
   syncLocal();
@@ -1600,8 +1609,8 @@ async function boot() {
   }
   window.__wc = { book, cube, camera }; // for tests and debugging
   const w = (params.get("w") || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 32);
-  if (w) return bootMatch(book, w);
+  if (w) return bootMatch(book, w, await loadBooks(book));
   const kind = kindFromURL(book);
-  if (kind) bootPlay(book, kind); else { bootHub(book); bootDuoHub(book); }
+  if (kind) bootPlay(book, kind); else { bootHub(book); bootDuoHub(book, await loadBooks(book)); }
 }
 boot();

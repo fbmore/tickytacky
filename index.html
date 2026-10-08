@@ -24,8 +24,8 @@
   </script>
 </head>
 <body>
-  <header class="wrap nav">
-    <a class="brand" href="./"><img class="brand-icon" src="icon.png" alt="" width="28" height="28">Wubee</a>
+  <header class="wrap nav" id="nav">
+    <a class="brand" href="./"><span class="brand-mark"><img class="brand-icon" src="icon.png" alt="" width="28" height="28"><canvas id="navMark" aria-hidden="true"></canvas></span>Wubee</a>
     <nav aria-label="Site">
       <ul>
         <li><a class="link" href="play.html">Play</a></li>
@@ -38,6 +38,7 @@
 
   <main>
     <section class="wrap hero">
+      <div class="hero-mark"><canvas id="heroMark" role="img" aria-label="The Wubee W: glass beads joined by glowing threads"></canvas></div>
       <p class="kicker">Three games · One glass cube</p>
       <h1>Trace it. Spin it. <em>Pop it.</em></h1>
       <p class="lede">A word hunt that runs through the layers, tic-tac-toe in three dimensions, and a colour-popping puzzle where gravity follows your hand. Play the computer, a friend beside you, or anyone with a link.</p>
@@ -49,6 +50,21 @@
         <a class="btn primary" href="play.html">Play now in your browser</a>
       </div>
       <p class="platforms">For iPhone, iPad, Mac and Apple Vision Pro</p>
+    </section>
+
+    <section class="wrap film" aria-label="Wubee in 43 seconds">
+      <div class="film-frame">
+        <video id="promo" src="media/wubee-promo.mp4" poster="media/wubee-promo.jpg" width="1280" height="720"
+          muted loop playsinline preload="metadata"
+          aria-label="Word Cube played on iPhone, iPad, Apple Vision Pro and in a browser, then Tic Tac Cube and Cube Pop"></video>
+        <button class="sound" id="promoSound" type="button" aria-pressed="false" hidden>
+          <span class="sound-ico" aria-hidden="true">
+            <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></svg>
+            <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
+          </span>
+          <span class="sound-label">Sound on</span>
+        </button>
+      </div>
     </section>
 
     <section class="wrap demo" aria-labelledby="words-h">
@@ -105,6 +121,23 @@
       </div>
     </section>
 
+    <section class="wrap watch" aria-labelledby="watch-h">
+      <h2 class="section-title" id="watch-h">See it <em>play</em>.</h2>
+      <p class="section-sub">Recorded straight from the app: Word Cube, Tic Tac Cube and Cube Pop on iPhone and Apple Vision&nbsp;Pro.</p>
+      <div class="watch-grid">
+        <figure class="clip">
+          <video src="media/preview-iphone.mp4" poster="media/preview-iphone.jpg" width="540" height="1170"
+            controls playsinline preload="none" aria-label="Wubee on iPhone"></video>
+          <figcaption>iPhone</figcaption>
+        </figure>
+        <figure class="clip">
+          <video src="media/preview-visionpro.mp4" poster="media/preview-visionpro.jpg" width="1280" height="720"
+            controls playsinline preload="none" aria-label="Wubee on Apple Vision Pro, floating in a room"></video>
+          <figcaption>Apple Vision Pro</figcaption>
+        </figure>
+      </div>
+    </section>
+
     <section class="wrap" aria-labelledby="feat-h">
       <h2 class="section-title" id="feat-h">Made to be <em>touched</em>.</h2>
       <p class="section-sub">Every spin ticks like a dial, every piece lands with a soft thump, and every word you trace plays a little melody.</p>
@@ -142,7 +175,7 @@
         <article class="card span">
           <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="11" height="9.5" rx="2"/><path d="M6.5 17.5h4"/><rect x="15" y="9" width="6" height="11" rx="1.6"/></svg></div>
           <h3>On every Apple screen</h3>
-          <p>iPhone, iPad and Mac with Apple silicon, plus Apple Vision Pro, where the cube floats in your space in a clear glass window. Or play in any modern browser.</p>
+          <p>iPhone, iPad and Mac with Apple silicon, plus Apple Vision Pro, where the cube floats in your room, with or without a glass window behind it. Or play in any modern browser.</p>
         </article>
       </div>
     </section>
@@ -174,7 +207,33 @@
   </footer>
 
   <script type="module">
+    // Promo film: plays muted while it's on screen; the pill turns the game's sounds on.
+    // With reduced motion it never autoplays and shows the player's own controls instead.
+    const promo = document.getElementById("promo"), soundBtn = document.getElementById("promoSound");
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      promo.controls = true;
+    } else {
+      soundBtn.hidden = false;
+      new IntersectionObserver(([e]) => { if (e.isIntersecting) promo.play().catch(() => {}); else promo.pause(); },
+        { threshold: 0.35 }).observe(promo);
+      soundBtn.addEventListener("click", () => {
+        promo.muted = !promo.muted;
+        soundBtn.setAttribute("aria-pressed", String(!promo.muted));
+        soundBtn.querySelector(".sound-label").textContent = promo.muted ? "Sound on" : "Sound off";
+        if (!promo.muted && promo.paused) promo.play().catch(() => {});
+      });
+    }
     import { tttDemo, wordsDemo, popDemo } from "./demo.js";
+    import { wMark } from "./wmark.js";
+    // The W builds itself above the hero; once it scrolls away, a small one builds in the sticky nav.
+    const heroMark = document.getElementById("heroMark"), nav = document.getElementById("nav");
+    wMark(heroMark);
+    const navW = wMark(document.getElementById("navMark"));
+    new IntersectionObserver(([e]) => {
+      const scrolled = !e.isIntersecting;
+      if (scrolled && !nav.classList.contains("scrolled")) navW.play();
+      nav.classList.toggle("scrolled", scrolled);
+    }, { rootMargin: "-72px 0px 0px 0px" }).observe(heroMark);
     tttDemo(document.getElementById("demoTtt"));
     popDemo(document.getElementById("demoPop"));
     const chips = document.getElementById("wordChips");

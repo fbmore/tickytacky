@@ -14,6 +14,13 @@ export function boardIndex(gameId, round, count) {
 }
 
 export const starterFor = (round) => (round % 2 === 0 ? "X" : "O");
+
+/** Dictionaries, by the index the host's first join carries: cell = size + 10 × language. */
+export const LANGS = ["en", "it", "es"];
+export function decodeJoin(cell) {
+  const c = Math.max(0, cell | 0), n = c % 10;
+  return { size: WORD_SIZES.includes(n) ? n : 4, language: LANGS[Math.floor(c / 10)] ?? "en" };
+}
 const other = (r) => (r === "X" ? "O" : "X");
 
 /** `word` events carry "word|c1,c2,…" in `text`: the word and the cells traced. */
@@ -49,18 +56,18 @@ export function validTrace(puzzle, word, path, phase) {
 }
 
 /**
- * events: sorted (ts, then recordName). puzzleFor(size, round) → Puzzle for that round.
+ * events: sorted (ts, then recordName). puzzleFor(size, round, language) → Puzzle for that round.
  * Returns everything the UI needs; invalid events are ignored silently.
  */
 export function foldMatch(events, gameId, puzzleFor) {
   const s = {
-    size: 4, sizeSet: false, players: {}, colors: { X: "coral", O: "teal" },
+    size: 4, language: "en", sizeSet: false, players: {}, colors: { X: "coral", O: "teal" },
     round: 0, puzzle: null, claims: [], score: { X: 0, O: 0 }, turns: { X: 0, O: 0 }, passes: 0,
     turn: "X", over: null, resigned: null, wins: { X: 0, O: 0 }, ready: { X: false, O: false }, closedBy: null, says: [],
   };
   const roleOfId = (id) => (s.players.X?.id === id ? "X" : s.players.O?.id === id ? "O" : null);
   const startRound = (r) => {
-    s.round = r; s.puzzle = puzzleFor(s.size, r); s.claims = []; s.score = { X: 0, O: 0 };
+    s.round = r; s.puzzle = puzzleFor(s.size, r, s.language); s.claims = []; s.score = { X: 0, O: 0 };
     s.turns = { X: 0, O: 0 }; s.passes = 0; s.turn = starterFor(r); s.over = null; s.resigned = null; s.ready = { X: false, O: false };
   };
   const finish = (reason, winner) => {
@@ -81,7 +88,7 @@ export function foldMatch(events, gameId, puzzleFor) {
     switch (e.kind) {
       case "join": {
         if (!s.players.X) {
-          s.size = WORD_SIZES.includes(e.cell) ? e.cell : 4;
+          ({ size: s.size, language: s.language } = decodeJoin(e.cell));
           s.sizeSet = true;
           s.players.X = { id: e.author, name: e.text || e.authorName || "Player 1", color: e.color || "coral" };
           startRound(0);

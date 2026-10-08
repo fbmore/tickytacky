@@ -93,6 +93,42 @@ p, li { text-wrap: pretty; }
 .demo li::before { content: ""; flex: none; width: 8px; height: 8px; margin-top: 10px; border-radius: 50%; background: currentColor; opacity: 0.5; }
 .demo .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; }
 
+/* Promo film under the hero: plays muted while on screen, with a sound toggle. */
+.film { padding-bottom: clamp(24px, 5vw, 64px); }
+.film-frame { position: relative; aspect-ratio: 16 / 9; border-radius: 24px; overflow: hidden; background: var(--canvas); box-shadow: var(--shadow); }
+.film-frame video, .clip video { display: block; width: 100%; height: 100%; }
+/* Hairline over the picture (pure white at 10%) so the video's dark edge meets the page cleanly. */
+.film-frame::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1); pointer-events: none; }
+.sound { position: absolute; right: 16px; bottom: 16px; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px 0 13px;
+  border: 0; border-radius: 999px; font: 600 14px/1 var(--sans); color: var(--ink); cursor: pointer;
+  background: rgb(7 11 31 / 0.62); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12), 0 6px 18px rgb(0 0 0 / 0.3);
+  transition-property: background-color, scale; transition-duration: 150ms; transition-timing-function: var(--ease); }
+.sound:hover { background: rgb(17 26 61 / 0.78); }
+.sound:active { scale: 0.96; }
+.sound:focus-visible { outline: 2px solid #9fb2ec; outline-offset: 2px; }
+.sound-ico { position: relative; width: 18px; height: 18px; }
+.sound-ico svg { position: absolute; inset: 0; width: 100%; height: 100%;
+  transition-property: opacity, scale, filter; transition-duration: 200ms; transition-timing-function: var(--ease); }
+.sound .on, .sound[aria-pressed="true"] .off { opacity: 0; scale: 0.25; filter: blur(4px); }
+.sound[aria-pressed="true"] .on { opacity: 1; scale: 1; filter: blur(0); }
+@media (max-width: 520px) {
+  .film-frame { border-radius: 16px; }
+  /* Icon only on phones: the film is small, a labelled pill would cover a fifth of it. The label stays for screen readers. */
+  .sound { right: 8px; bottom: 8px; width: 44px; padding: 0; justify-content: center; }
+  .sound-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+
+/* App Store previews: phone and Vision Pro side by side at the same height (columns in their aspect ratios). */
+.watch { padding: clamp(28px, 5vw, 64px) 0 clamp(40px, 6vw, 80px); }
+.watch-grid { display: grid; gap: 20px; align-items: start; }
+@media (min-width: 760px) { .watch-grid { grid-template-columns: 0.26fr 1fr; } }
+.clip { margin: 0; }
+.clip video { border-radius: 20px; background: var(--canvas); box-shadow: var(--shadow); outline: 1px solid rgb(255 255 255 / 0.1); outline-offset: -1px; }
+.clip:first-child video { aspect-ratio: 540 / 1170; }
+.clip:last-child video { aspect-ratio: 16 / 9; }
+@media (max-width: 759px) { .clip:first-child { width: min(300px, 100%); margin-inline: auto; } }
+.clip figcaption { margin-top: 12px; text-align: center; font-size: 14px; color: var(--faint); }
+
 /* Features */
 .section-title { font-size: clamp(32px, 4.4vw, 48px); text-align: center; margin: 0 0 12px; }
 .section-sub { text-align: center; color: var(--muted); margin: 0 auto 36px; max-width: 560px; }
@@ -147,7 +183,25 @@ details > div { padding: 0 20px 16px; }
 details p, details li { font-size: 16px; }
 
 /* Wubee mark in the nav */
-.brand-icon { width: 28px; height: 28px; vertical-align: middle; margin-right: 8px; border-radius: 50%; }
+.brand-icon { width: 28px; height: 28px; vertical-align: middle; margin-right: 8px; border-radius: 7px; }
+
+/* Home: the nav sticks, and once the hero's W scrolls away a small live W replaces the icon. */
+#nav { position: sticky; top: 0; z-index: 20; }
+/* The bar's background spans the viewport (the nav itself is the narrow .wrap): fixed to the top, nav-tall. */
+#nav::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 80px; z-index: -1; opacity: 0;
+  background: rgb(7 11 31 / 0.72); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.06);
+  transition-property: opacity; transition-duration: 200ms; transition-timing-function: var(--ease); }
+#nav.scrolled::before { opacity: 1; }
+.brand-mark { position: relative; display: inline-block; width: 28px; height: 28px; margin-right: 8px; flex: none; }
+.brand-mark .brand-icon { margin: 0; display: block; transition-property: opacity, scale; transition-duration: 200ms; transition-timing-function: var(--ease); }
+/* The canvas overhangs the 28px slot so the beads' glow isn't clipped. */
+.brand-mark canvas { position: absolute; inset: -8px; width: 44px; height: 44px; opacity: 0; scale: 0.6; pointer-events: none;
+  transition-property: opacity, scale; transition-duration: 250ms; transition-timing-function: var(--ease); }
+#nav.scrolled .brand-mark .brand-icon { opacity: 0; scale: 0.6; }
+#nav.scrolled .brand-mark canvas { opacity: 1; scale: 1; }
+.hero-mark { width: clamp(132px, 22vw, 200px); aspect-ratio: 1; margin: 0 auto 8px; }
+.hero-mark canvas { display: block; width: 100%; height: 100%; }
 
 /* The © line, 70% of the footer text */
 footer .copyright { font-size: 70%; }
