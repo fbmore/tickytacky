@@ -720,7 +720,7 @@ function bootSolo(mode) {
     $("resultShare").hidden = false;
     openCard($("result"), mode === "daily" ? $("resultShare") : $("resultAgain"));
   }
-  const shareText = () => `Cube Pop · ${mode === "daily" ? `Daily #${day + 1}` : `${n}×${n}×${n}`}\n🫧 ${g.score} points · longest pop ${g.bestChain} · ${g.specials} specials\nhttps://fbmore.github.io/wubee/pop.html`;
+  const shareText = () => `Cube Pop · ${mode === "daily" ? `Daily #${day + 1}` : `${n}×${n}×${n}`}\n🫧 ${g.score} points · longest pop ${g.bestChain} · ${g.specials} specials\nhttps://wubee.app/pop.html`;
   $("resultShare").addEventListener("click", async () => {
     const text = shareText();
     if (navigator.share) { navigator.share({ title: "Cube Pop", text }).catch(() => {}); return; }

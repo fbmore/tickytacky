@@ -19,6 +19,13 @@
               "w": "?*"
             },
             "comment": "Word Cube game links"
+          },
+          {
+            "/": "/*",
+            "?": {
+              "p": "?*"
+            },
+            "comment": "Cube Pop game links"
           }
         ]
       }
