@@ -55,7 +55,13 @@ p, li { text-wrap: pretty; }
 .btn.primary { background: var(--accent); color: #fff; box-shadow: 0 8px 24px rgb(255 107 91 / 0.35), 0 0 0 1px rgb(255 255 255 / 0.12) inset; }
 .btn.primary:hover { background: #ff7d6f; }
 .btn:focus-visible, .nav a:focus-visible, .brand:focus-visible { outline: 2px solid #9fb2ec; outline-offset: 2px; }
-.pill-soon { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 999px; color: var(--muted); background: var(--surface); font-weight: 500; font-size: 15px; box-shadow: 0 0 0 1px rgb(255 255 255 / 0.08) inset; }
+/* Apple's black "Download on the App Store" badge, unmodified. Its own black body and grey hairline are
+   what Apple specifies on a dark background, so no extra chrome. 48px tall matches .btn (Apple's on-screen
+   minimum is 40px); the .cta 12px gap is a quarter of the height, Apple's clear-space minimum. */
+.appstore { display: inline-flex; align-items: center; line-height: 0; border-radius: 10px; }
+.appstore img { height: 48px; width: auto; display: block; }
+.appstore:focus-visible { outline: 2px solid #9fb2ec; outline-offset: 4px; }
+.platforms { margin: 16px auto 0; font-size: 15px; color: var(--faint); }
 
 /* Hero */
 .hero { text-align: center; padding: clamp(40px, 9vw, 110px) 0 clamp(24px, 5vw, 60px); }
@@ -96,6 +102,8 @@ p, li { text-wrap: pretty; }
 .card p { margin: 0; color: var(--muted); font-size: 16px; }
 .card .ico { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 16px; background: var(--surface-2); color: var(--accent); }
 .card .ico svg { width: 20px; height: 20px; }
+.card.span { grid-column: 1 / -1; }   /* 7th card: full row so 1, 2 or 3 columns never leave an orphan */
+.card.span p { max-width: 62ch; }
 
 .pricing { text-align: center; padding: clamp(36px, 6vw, 80px) 0; }
 .pricing .price { font-family: var(--serif); font-size: clamp(44px, 7vw, 84px); line-height: 1.05; margin: 0 auto; max-width: none; color: var(--ink); text-wrap: balance; }
