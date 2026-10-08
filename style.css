@@ -205,7 +205,7 @@ p { text-wrap: pretty; }
 .links { display: flex; gap: 14px; }
 .links a { color: var(--ink-2); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; white-space: nowrap; }
 .links a:hover { color: var(--ink); }
-.legal { margin: 0; font-size: 11px; color: var(--ink-3); }
+.legal { margin: 0; font-size: 7.7px; color: var(--ink-3); }   /* 70% of the old 11px */
 
 dialog {
   border: 0; border-radius: 24px; padding: 24px; width: min(360px, calc(100vw - 32px));

@@ -115,7 +115,7 @@ function runner(canvas, s, script, tick) {
 
 export function tttDemo(canvas) {
   const s = stage(canvas);
-  const n = 4, mid = (n - 1) / 2, gap = 1.25, g = geometry(n);
+  const n = 3, mid = (n - 1) / 2, gap = 1.25, g = geometry(n);   // 3×3×3, like the apps’ default
   plates(s.pivot, n, 1, gap, 0.36);
   const pos = (i) => { const [x, y, z] = g.coords(i); return new THREE.Vector3(x - mid, (y - mid) * gap, z - mid); };
   const slotGeo = new THREE.SphereGeometry(0.085, 18, 12), pieceGeo = new THREE.SphereGeometry(0.3, 40, 28);
@@ -192,9 +192,9 @@ function letterSprite(t) {
 export async function wordsDemo(canvas, onWord) {
   const s = stage(canvas);
   const book = await fetch("puzzles.json").then((r) => r.json()).then(makeBook).catch(() => null);
-  const puzzle = book?.puzzle({ size: 4, index: 3 });
+  const puzzle = book?.puzzle({ size: 3, index: 0 });
   if (!puzzle) return;
-  const n = 4, mid = (n - 1) / 2, gap = 1.25, r = 0.27;
+  const n = 3, mid = (n - 1) / 2, gap = 1.25, r = 0.27;
   plates(s.pivot, n, 1, gap, 0.36);
   const pearl = new THREE.MeshPhysicalMaterial({ color: 0xe9ecf8, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.06 });
   const coral = hexOf("coral");
@@ -223,7 +223,7 @@ export async function wordsDemo(canvas, onWord) {
     for (const l of labels) {
       l.m.getWorldPosition(wp);
       dir.copy(s.camera.position).sub(wp).normalize();
-      l.sp.position.copy(wp).addScaledVector(dir, r * 1.02);
+      l.sp.position.copy(wp).addScaledVector(dir, r * l.m.scale.x * 1.04);
     }
   }
   async function play(ctl, my) {
@@ -255,7 +255,7 @@ export async function wordsDemo(canvas, onWord) {
 
 export function popDemo(canvas) {
   const s = stage(canvas);
-  const n = 4, mid = (n - 1) / 2, pitch = 0.82;
+  const n = 3, mid = (n - 1) / 2, pitch = 0.82;
   const box = new THREE.Group();          // turned so the current gravity points down the screen
   s.pivot.rotation.set(0.32, 0, 0);
   s.pivot.add(box);

@@ -140,3 +140,6 @@ details p, details li { font-size: 16px; }
 
 /* Wubee mark in the nav */
 .brand-icon { width: 28px; height: 28px; vertical-align: middle; margin-right: 8px; border-radius: 50%; }
+
+/* The © line, 70% of the footer text */
+footer .copyright { font-size: 70%; }
