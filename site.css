@@ -137,3 +137,6 @@ summary::after { content: "+"; color: var(--faint); font-size: 22px; line-height
 details[open] summary::after { rotate: 45deg; }
 details > div { padding: 0 20px 16px; }
 details p, details li { font-size: 16px; }
+
+/* Wubee mark in the nav */
+.brand-icon { width: 28px; height: 28px; vertical-align: middle; margin-right: 8px; border-radius: 50%; }
