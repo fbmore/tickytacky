@@ -85,7 +85,7 @@ export function makeBook(file) {
       if ("daily" in kind) {
         if (!file.daily.length) return null;
         const i = kind.daily % file.daily.length; // loops after a year until the book is extended
-        n = 4; raw = file.daily[i]; extras = file.extra?.daily?.[i];
+        n = file.dailySize ?? 4; raw = file.daily[i]; extras = file.extra?.daily?.[i];
       } else {
         const list = file.practice[String(kind.size)];
         if (!list?.length) return null;
@@ -98,7 +98,10 @@ export function makeBook(file) {
 }
 
 /** Storage key for a board's progress — same names as iOS, under the web's "ttc." prefix. */
-export const progressKey = (kind) => ("daily" in kind ? `ttc.wc-d${kind.daily}` : `ttc.wc-p${kind.size}-${kind.index}`);
+/** 4×4×4 dailies used "wc-d<day>"; 3×3×3 dailies use "wc-d3-<day>" so old progress never mixes in. */
+export const progressKey = (kind, dailySize = 3) => ("daily" in kind
+  ? (dailySize === 4 ? `ttc.wc-d${kind.daily}` : `ttc.wc-d${dailySize}-${kind.daily}`)
+  : `ttc.wc-p${kind.size}-${kind.index}`);
 export const emptyProgress = () => ({ found: [], bonus: [], bestPath: [], bestWord: "", extra: [] });
 
 // ───────────── one game ─────────────

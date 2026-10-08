@@ -28,7 +28,7 @@ for (const kind of [{ daily: 0 }, { daily: 200 }, { size: 3, index: 0 }, { size:
 
 // Scoring and layers.
 {
-  const p = book.puzzle({ daily: 3 });
+  const p = book.puzzle({ size: 4, index: 0 });
   assert.equal(p.points("rent"), 1);
   assert.equal(p.points("renter"), 6);
   assert.equal(p.touchesEveryLayer([0, 4, 8, 12]), true);
@@ -98,6 +98,8 @@ assert.equal(book.today(new Date(2026, 9, 6, 23, 59)), 0);
 assert.equal(book.today(new Date(2026, 9, 7, 0, 1)), 1);
 assert.equal(book.today(new Date(2027, 2, 30, 12)), 175); // across a DST change
 assert.equal(book.dateOfDay(1).getDate(), 7);
-assert.equal(progressKey({ daily: 4 }), "ttc.wc-d4");
+assert.equal(progressKey({ daily: 4 }), "ttc.wc-d3-4");
+assert.equal(progressKey({ daily: 4 }, 4), "ttc.wc-d4");
+assert.equal(book.puzzle({ daily: 0 }).n, 3);
 assert.equal(progressKey({ size: 5, index: 2 }), "ttc.wc-p5-2");
 console.log("wordcube ok");
