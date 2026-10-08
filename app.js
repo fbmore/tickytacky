@@ -865,7 +865,7 @@ function updateTitle() {
   const role = myRole();
   const waiting = !!(backend && !backend.local && role && !state.closedBy &&
     (ui.canPlace() || (state.winner && state.ready[other(role)] && !state.ready[role])));
-  document.title = (document.hidden && waiting ? "● Your move · " : "") + "Tic Tac Cube · TickyTacky";
+  document.title = (document.hidden && waiting ? "● Your move · " : "") + "Tic Tac Cube · Wubee";
 }
 document.addEventListener("visibilitychange", updateTitle);
 
@@ -1224,7 +1224,7 @@ async function boot() {
   $("getApp").addEventListener("click", (e) => e.preventDefault());
 
   $("hud").hidden = false;
-  $("openApp").href = `tickytacky://g/${GAME_ID}`;
+  $("openApp").href = `wubee://g/${GAME_ID}`;
   setLevelUI();
   if (PLAY) {
     backend = localBackend(PLAY);

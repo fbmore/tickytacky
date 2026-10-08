@@ -513,7 +513,7 @@ const boardParam = (kind) => ("daily" in kind ? `d${kind.daily}` : `p${kind.size
 
 function bootHub(book) {
   $("hub").hidden = false;
-  document.title = "Word Cube · TickyTacky";
+  document.title = "Word Cube · Wubee";
   const day = book.today();
   const kind = { daily: day };
   const prog = loadProgress(kind);
