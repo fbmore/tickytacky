@@ -634,7 +634,7 @@ function closeCard(el) {
 /* ───────────────────────────── solo ───────────────────────────── */
 
 const params = new URLSearchParams(location.search);
-const sizeParam = P.POP_SIZES.includes(Number(params.get("size"))) ? Number(params.get("size")) : 4;
+const sizeParam = P.POP_SIZES.includes(Number(params.get("size"))) ? Number(params.get("size")) : 3;
 const fmtDate = (day) => new Date(2026, 9, 6 + day).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
 function bootSolo(mode) {

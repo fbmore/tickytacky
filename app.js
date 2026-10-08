@@ -168,7 +168,7 @@ const pieceMats = {
 const pieces = new Map(); // cell -> Object3D (a sphere mesh, or an X / O group)
 
 // Piece style is a per-browser look preference ("orbs" | "xo"); it never touches the protocol.
-let pieceStyle = store.get("ttc.pieces") === "xo" ? "xo" : "orbs";
+let pieceStyle = store.get("ttc.pieces") === "orbs" ? "orbs" : "xo";   // X & O by default
 
 // X = two crossed capsules, O = a torus — same sizes as iOS. Both lie in the XY plane and are
 // turned to face the camera every frame, so they read as X and O from any spin angle.
@@ -503,7 +503,7 @@ const SIZE_NOTES = {
   5: "Big and strategic. Room for long plans.",
 };
 const prefs = {
-  get size() { return SIZES.includes(Number(store.get("ttc.size"))) ? Number(store.get("ttc.size")) : 4; },
+  get size() { return SIZES.includes(Number(store.get("ttc.size"))) ? Number(store.get("ttc.size")) : 3; },
   get color() { return store.get("ttc.color") || "coral"; },
   get name2() { return store.get("ttc.name2") || "Player 2"; },
   get color2() { const c = store.get("ttc.color2"); return c && c !== prefs.color ? c : resolveColors(prefs.color, "teal").O; },
@@ -1212,7 +1212,7 @@ async function boot() {
     canvas.hidden = true;
     initHome({
       sound, setSoundOn: (v) => { sound.on = v; if (v) { sound.unlock(); sound.tick(); } },
-      onPieces: (v) => store.set("ttc.pieces", v), pieceOptions: PIECE_OPTIONS, pieceStyle: () => store.get("ttc.pieces") || "orbs",
+      onPieces: (v) => store.set("ttc.pieces", v), pieceOptions: PIECE_OPTIONS, pieceStyle: () => store.get("ttc.pieces") || "xo",
     });
     return;
   }

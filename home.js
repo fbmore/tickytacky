@@ -17,9 +17,9 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
 };
 const newGameId = () => Array.from(crypto.getRandomValues(new Uint8Array(10)), (b) => "abcdefghijkmnpqrstuvwxyz23456789"[b % 32]).join("");
-const sizeOf = (key) => { const n = Number(store.get(key)); return SIZES.includes(n) ? n : 4; };
+const sizeOf = (key) => { const n = Number(store.get(key)); return SIZES.includes(n) ? n : 3; };   // 3×3×3 is the gentlest start
 const other = (r) => (r === "X" ? "O" : "X");
-const PAGES = ["ttt", "words", "pop"];
+const PAGES = ["words", "ttt", "pop"];   // Word Cube first, like the iOS app
 const SIZE_KEY = { ttt: "ttc.size", words: "ttc.wsize", pop: "ttc.psize" };
 
 /* ── word book (lazy: only for the Word Cube preview, today's progress, and Word games) ── */
@@ -114,7 +114,7 @@ export function initHome({ sound, setSoundOn, onPieces, pieceOptions, pieceStyle
   const dots = [...document.querySelectorAll(".hc-dots button")];
   const params = new URLSearchParams(location.search);
   const wanted = PAGES.indexOf(params.get("page") ?? "");
-  let current = wanted >= 0 ? wanted : Math.min(2, Math.max(0, Number(store.get("ttc.homePage")) || 0));
+  let current = wanted >= 0 ? wanted : Math.min(2, Math.max(0, Number(store.get("ttc.homePage2")) || 0));
   if (wanted >= 0) history.replaceState(null, "", location.pathname);
   const pageW = () => track.clientWidth || innerWidth;
   function setCurrent(i, fromScroll = false) {
@@ -127,7 +127,7 @@ export function initHome({ sound, setSoundOn, onPieces, pieceOptions, pieceStyle
     }
     if (i === current && fromScroll) return;
     current = i;
-    store.set("ttc.homePage", i);
+    store.set("ttc.homePage2", i);
     dots.forEach((d, k) => { d.setAttribute("aria-current", String(k === i)); });
     PAGES.forEach((g, k) => previews[g].setActive(k === i));
     document.querySelectorAll(".hc-page").forEach((p, k) => p.inert = k !== i);

@@ -755,7 +755,7 @@ const params = new URLSearchParams(location.search);
 const SEAT2 = params.get("seat") === "2"; // testing: second seat with the same Apple Account
 const HOST_SIZE = WORD_SIZES.includes(Number(params.get("host"))) ? Number(params.get("host")) : 0;
 const duoPrefs = {
-  get size() { const n = Number(store.get("ttc.wsize")); return WORD_SIZES.includes(n) ? n : 4; },
+  get size() { const n = Number(store.get("ttc.wsize")); return WORD_SIZES.includes(n) ? n : 3; },
   get name() { return store.get("ttc.name") || ""; },
   get color() { return store.get("ttc.color") || "coral"; },
   get name2() { return store.get("ttc.name2") || "Player 2"; },
